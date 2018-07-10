@@ -7,6 +7,8 @@ RUN apt-get install -y \
     cmake \
     curl \
     git \
+    libgl-dev \
+    libglu-dev \
     libpython3-dev \
     lsb-release \
     pkg-config \
