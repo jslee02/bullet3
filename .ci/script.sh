@@ -18,12 +18,12 @@ make -j8
 ctest -j8 --output-on-failure
 
 # Build again with double precision
-cmake . -G "Unix Makefiles" -DUSE_DOUBLE_PRECISION=ON #-DCMAKE_CXX_FLAGS=-Werror
+cmake . -G "Unix Makefiles" -DUSE_DOUBLE_PRECISION=ON -DPYTHON_VERSION_PYBULLET=$PYTHON_VERSION_PYBULLET #-DCMAKE_CXX_FLAGS=-Werror
 make -j8
 ctest -j8 --output-on-failure
 
 # Build again with shared libraries
-cmake . -G "Unix Makefiles" -DBUILD_SHARED_LIBS=ON
+cmake . -G "Unix Makefiles" -DBUILD_SHARED_LIBS=ON -DPYTHON_VERSION_PYBULLET=$PYTHON_VERSION_PYBULLET
 make -j8
 ctest -j8 --output-on-failure
 $SUDO make install
