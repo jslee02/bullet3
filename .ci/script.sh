@@ -4,7 +4,7 @@ set -ex
 echo "CXX="$CXX
 echo "CC="$CC
 if [[ "$TRAVIS_OS_NAME" == "linux" && "$CXX" = "g++" ]]; then
-  $SUDO apt-get install python3-pip
+  $SUDO apt-get install -y python3-pip
   $SUDO pip3 install -U pip wheel
   $SUDO pip3 install setuptools
   $SUDO python3 setup.py install
