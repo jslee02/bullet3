@@ -5,35 +5,41 @@ matrix:
       compiler: gcc
       env:
         - BUILD_NAME=TRUSTY_GCC
+        - PYTHON_VERSION_PYBULLET=3.4
         - SUDO=sudo
     - os: linux
       compiler: clang
       env:
         - BUILD_NAME=TRUSTY_CLANG
+        - PYTHON_VERSION_PYBULLET=3.4
         - SUDO=sudo
     - os: linux
       compiler: gcc
       env:
         - BUILD_NAME=XENIAL_GCC
         - DOCKER_FILE="ubuntu-xenial"
+        - PYTHON_VERSION_PYBULLET=3.5
       services: docker
     - os: linux
       compiler: clang
       env:
         - BUILD_NAME=XENIAL_CLANG
         - DOCKER_FILE="ubuntu-xenial"
+        - PYTHON_VERSION_PYBULLET=3.5
       services: docker
     - os: linux
       compiler: gcc
       env:
         - BUILD_NAME=BIONIC_GCC
         - DOCKER_FILE="ubuntu-bionic"
+        - PYTHON_VERSION_PYBULLET=3.6
       services: docker
     - os: linux
       compiler: clang
       env:
         - BUILD_NAME=BIONIC_CLANG
         - DOCKER_FILE="ubuntu-bionic"
+        - PYTHON_VERSION_PYBULLET=3.6
       services: docker
     - os: osx
       compiler: gcc
