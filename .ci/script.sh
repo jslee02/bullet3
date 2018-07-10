@@ -13,7 +13,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" && "$CXX" = "g++" ]]; then
   python3 examples/pybullet/unittests/userDataTest.py --verbose
   python3 examples/pybullet/unittests/saveRestoreStateTest.py --verbose
 fi
-cmake . -DBUILD_PYBULLET=ON -G"Unix Makefiles" #-DCMAKE_CXX_FLAGS=-Werror
+cmake . -DBUILD_PYBULLET=ON -G"Unix Makefiles" -DPYTHON_VERSION_PYBULLET=$PYTHON_VERSION_PYBULLET #-DCMAKE_CXX_FLAGS=-Werror
 make -j8
 ctest -j8 --output-on-failure
 
