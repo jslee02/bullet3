@@ -1,0 +1,1 @@
+BULLET_ADD_TEST(test_Matrix3x3)
