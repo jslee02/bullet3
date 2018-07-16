@@ -1,8 +1,16 @@
 #===============================================================================
 # Usage:
-#   BULLET_ADD_TEST("unit" test_UnitTestA) # assumed source is test_UnitTestA.cpp
-#   BULLET_ADD_TEST("unit" test_UnitTestB test_SourceB1.cpp)
-#   BULLET_ADD_TEST("unit" test_UnitTestA test_SourceC1.cpp test_SourceC2.cpp)
+#   BULLET_ADD_TEST(test_UnitTest [sources...])
+#
+# Examples:
+#   # assumed source has the same name (i.e., test_UnitTestA.cpp)
+#   BULLET_ADD_TEST(test_UnitTestA)
+#
+#   # single source
+#   BULLET_ADD_TEST(test_UnitTestB test_SourceB1.cpp) 
+#   
+#   # multiple sources
+#   BULLET_ADD_TEST(test_UnitTestC test_SourceC1.cpp test_SourceC2.cpp) 
 #===============================================================================
 FUNCTION(BULLET_ADD_TEST target_name) # ARGN for source files
   IF(${ARGC} GREATER 2)
