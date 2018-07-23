@@ -1416,13 +1416,15 @@ void btMultiBody::mulMatrix(btScalar *pA, btScalar *pB, int rowsA, int colsA, in
 	}
 }
 
-void btMultiBody::calcAccelerationDeltasMultiDof(const btScalar *force, btScalar *output,
-                                       btAlignedObjectArray<btScalar> &scratch_r, btAlignedObjectArray<btVector3> &scratch_v) const
+void btMultiBody::calcAccelerationDeltasMultiDof(
+	const btScalar *force,
+	btScalar *output,
+	btAlignedObjectArray<btScalar>& scratch_r,
+	btAlignedObjectArray<btVector3>& scratch_v) const
 {
     // Temporary matrices/vectors -- use scratch space from caller
     // so that we don't have to keep reallocating every frame
 
-	
 	int num_links = getNumLinks();	
     scratch_r.resize(m_dofCount);
     scratch_v.resize(4*num_links + 4);	    
@@ -1441,7 +1443,7 @@ void btMultiBody::calcAccelerationDeltasMultiDof(const btScalar *force, btScalar
     // hhat is NOT stored for the base (but ahat is) 
 	const btSpatialForceVector * h = (btSpatialForceVector *)(m_dofCount > 0 ? &m_vectorBuf[0] : 0);
 	btSpatialMotionVector * spatAcc = (btSpatialMotionVector *)v_ptr;
-	v_ptr += num_links * 2 + 2;
+	// v_ptr += num_links * 2 + 2;
 
     // Y_i (scratch), invD_i (cached)
     const btScalar * invD = m_dofCount > 0 ? &m_realBuf[6 + m_dofCount] : 0;
@@ -1488,7 +1490,6 @@ void btMultiBody::calcAccelerationDeltasMultiDof(const btScalar *force, btScalar
 											;
 		}
 
-		btVector3 in_top, in_bottom, out_top, out_bottom;
 		const btScalar *invDi = &invD[m_links[i].m_dofOffset*m_links[i].m_dofOffset];
 		
 		for(int dof = 0; dof < m_links[i].m_dofCount; ++dof)
@@ -1714,7 +1715,7 @@ void btMultiBody::stepPositionsMultiDof(btScalar dt, btScalar *pq, btScalar *pqd
     }
 }
 
-void btMultiBody::fillConstraintJacobianMultiDof(int link,
+void btMultiBody::fillConstraintJacobianMultiDof(int link_find_me_hehe,
                                     const btVector3 &contact_point,
 									const btVector3 &normal_ang,
                                     const btVector3 &normal_lin,
@@ -1724,15 +1725,24 @@ void btMultiBody::fillConstraintJacobianMultiDof(int link,
                                     btAlignedObjectArray<btMatrix3x3> &scratch_m) const
 {
     // temporary space
-	int num_links = getNumLinks();
-	int m_dofCount = getNumDofs();
-    scratch_v.resize(3*num_links + 3);			//(num_links + base) offsets + (num_links + base) normals_lin + (num_links + base) normals_ang
+	const int num_links = getNumLinks();
+	const int m_dofCount = getNumDofs();
+
+	// (num_links + base) offsets + (num_links + base) normals_lin + (num_links + base) normals_ang
+	scratch_v.resize(3*num_links + 3);
     scratch_m.resize(num_links + 1);
 
-    btVector3 * v_ptr = &scratch_v[0];
-    btVector3 * p_minus_com_local = v_ptr; v_ptr += num_links + 1;
-    btVector3 * n_local_lin = v_ptr; v_ptr += num_links + 1;
-	btVector3 * n_local_ang = v_ptr; v_ptr += num_links + 1;
+	btVector3* v_ptr = &scratch_v[0];
+	btVector3* p_minus_com_local = v_ptr;
+	v_ptr += num_links + 1;
+
+	btVector3* n_local_lin = v_ptr;
+	v_ptr += num_links + 1;
+
+	btVector3* n_local_ang = v_ptr;
+	v_ptr += num_links + 1;
+
+	// Validate the size
     btAssert(v_ptr - &scratch_v[0] == scratch_v.size());
 
     scratch_r.resize(m_dofCount);
@@ -1740,11 +1750,13 @@ void btMultiBody::fillConstraintJacobianMultiDof(int link,
 
     btMatrix3x3 * rot_from_world = &scratch_m[0];
 
+	// Relative position from the origin of base body to the contact point (on the body)
     const btVector3 p_minus_com_world = contact_point - m_basePos;
-	const btVector3 &normal_lin_world = normal_lin;							//convenience
-	const btVector3 &normal_ang_world = normal_ang;
+	const btVector3& normal_lin_world = normal_lin;							//convenience
+	const btVector3& normal_ang_world = normal_ang;
+	// TODO(JS): What's the purpose of normal_ang? Maybe for torsional friction?
 
-    rot_from_world[0] = btMatrix3x3(m_baseQuat);    
+	rot_from_world[0] = btMatrix3x3(m_baseQuat);
     
     // omega coeffients first.
     btVector3 omega_coeffs_world;
@@ -1769,79 +1781,87 @@ void btMultiBody::fillConstraintJacobianMultiDof(int link,
     }
 
     // Qdot coefficients, if necessary.
-    if (num_links > 0 && link > -1) {
+	if (num_links == 0 || link_find_me_hehe <= 0)
+	{
+		return;
+	}
 
-        // TODO: speed this up -- don't calculate for m_links we don't need.
-        // (Also, we are making 3 separate calls to this function, for the normal & the 2 friction directions,
-        // which is resulting in repeated work being done...)
+	// TODO: speed this up -- don't calculate for m_links we don't need.
+	// (Also, we are making 3 separate calls to this function, for the normal & the 2 friction directions,
+	// which is resulting in repeated work being done...)
 
-        // calculate required normals & positions in the local frames.
-        for (int i = 0; i < num_links; ++i) {
+	// calculate required normals & positions in the local frames.
+	for (int i = 0; i < num_links; ++i)
+	{
+		// transform to local frame
+		const int parent = m_links[i].m_parent;
+		const btMatrix3x3 rotParentToThis(m_links[i].m_cachedRotParentToThis);
+		rot_from_world[i+1] = rotParentToThis * rot_from_world[parent+1];
+		// TODO(JS): Is this order of matrix operation correct? Yes.
 
-            // transform to local frame
-            const int parent = m_links[i].m_parent;
-            const btMatrix3x3 mtx(m_links[i].m_cachedRotParentToThis);
-            rot_from_world[i+1] = mtx * rot_from_world[parent+1];
+		// TODO(JS): What does parent+1 refer to? Is this simply becase 0 is reserved for the base? Yes
+		n_local_lin[i+1] = rotParentToThis * n_local_lin[parent+1];
+		n_local_ang[i+1] = rotParentToThis * n_local_ang[parent+1];
+		p_minus_com_local[i+1] = rotParentToThis * p_minus_com_local[parent+1] - m_links[i].m_cachedRVector;
+		// TODO(JS): What is m_cachedRVector? vector from COM of parent to COM of this link, in local frame.
 
-            n_local_lin[i+1] = mtx * n_local_lin[parent+1];
-			n_local_ang[i+1] = mtx * n_local_ang[parent+1];
-            p_minus_com_local[i+1] = mtx * p_minus_com_local[parent+1] - m_links[i].m_cachedRVector;
-
-			// calculate the jacobian entry
-			switch(m_links[i].m_jointType)
-			{
-				case btMultibodyLink::eRevolute:
-				{
-					results[m_links[i].m_dofOffset] = n_local_lin[i+1].dot(m_links[i].getAxisTop(0).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(0));
-					results[m_links[i].m_dofOffset] += n_local_ang[i+1].dot(m_links[i].getAxisTop(0));
-					break;
-				}
-				case btMultibodyLink::ePrismatic:
-				{
-					results[m_links[i].m_dofOffset] = n_local_lin[i+1].dot(m_links[i].getAxisBottom(0));
-					break;
-				}
-				case btMultibodyLink::eSpherical:
-				{
-					results[m_links[i].m_dofOffset + 0] = n_local_lin[i+1].dot(m_links[i].getAxisTop(0).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(0));
-					results[m_links[i].m_dofOffset + 1] = n_local_lin[i+1].dot(m_links[i].getAxisTop(1).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(1));
-					results[m_links[i].m_dofOffset + 2] = n_local_lin[i+1].dot(m_links[i].getAxisTop(2).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(2));
-										
-					results[m_links[i].m_dofOffset + 0] += n_local_ang[i+1].dot(m_links[i].getAxisTop(0));
-					results[m_links[i].m_dofOffset + 1] += n_local_ang[i+1].dot(m_links[i].getAxisTop(1));
-					results[m_links[i].m_dofOffset + 2] += n_local_ang[i+1].dot(m_links[i].getAxisTop(2));
-
-					break;
-				}
-				case btMultibodyLink::ePlanar:
-				{
-					results[m_links[i].m_dofOffset + 0] = n_local_lin[i+1].dot(m_links[i].getAxisTop(0).cross(p_minus_com_local[i+1]));// + m_links[i].getAxisBottom(0));
-					results[m_links[i].m_dofOffset + 1] = n_local_lin[i+1].dot(m_links[i].getAxisBottom(1));
-					results[m_links[i].m_dofOffset + 2] = n_local_lin[i+1].dot(m_links[i].getAxisBottom(2));
-
-					break;
-				}
-				default:
-				{
-				}
-			}
-            
-        }
-
-        // Now copy through to output.
-		//printf("jac[%d] = ", link);
-        while (link != -1) 
+		// calculate the jacobian entry
+		switch(m_links[i].m_jointType)
 		{
-			for(int dof = 0; dof < m_links[link].m_dofCount; ++dof)
+			case btMultibodyLink::eRevolute:
 			{
-				jac[6 + m_links[link].m_dofOffset + dof] = results[m_links[link].m_dofOffset + dof];
-				//printf("%.2f\t", jac[6 + m_links[link].m_dofOffset + dof]);
+				results[m_links[i].m_dofOffset] = n_local_lin[i+1].dot(m_links[i].getAxisTop(0).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(0));
+				results[m_links[i].m_dofOffset] += n_local_ang[i+1].dot(m_links[i].getAxisTop(0));
+				break;
 			}
-            
-			link = m_links[link].m_parent;
-        }
-		//printf("]\n");
-    }
+			case btMultibodyLink::ePrismatic:
+			{
+				results[m_links[i].m_dofOffset] = n_local_lin[i+1].dot(m_links[i].getAxisBottom(0));
+				break;
+			}
+			case btMultibodyLink::eSpherical:
+			{
+				results[m_links[i].m_dofOffset + 0] = n_local_lin[i+1].dot(m_links[i].getAxisTop(0).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(0));
+				results[m_links[i].m_dofOffset + 1] = n_local_lin[i+1].dot(m_links[i].getAxisTop(1).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(1));
+				results[m_links[i].m_dofOffset + 2] = n_local_lin[i+1].dot(m_links[i].getAxisTop(2).cross(p_minus_com_local[i+1]) + m_links[i].getAxisBottom(2));
+
+				results[m_links[i].m_dofOffset + 0] += n_local_ang[i+1].dot(m_links[i].getAxisTop(0));
+				results[m_links[i].m_dofOffset + 1] += n_local_ang[i+1].dot(m_links[i].getAxisTop(1));
+				results[m_links[i].m_dofOffset + 2] += n_local_ang[i+1].dot(m_links[i].getAxisTop(2));
+
+				break;
+			}
+			case btMultibodyLink::ePlanar:
+			{
+				results[m_links[i].m_dofOffset + 0] = n_local_lin[i+1].dot(m_links[i].getAxisTop(0).cross(p_minus_com_local[i+1]));// + m_links[i].getAxisBottom(0));
+				results[m_links[i].m_dofOffset + 1] = n_local_lin[i+1].dot(m_links[i].getAxisBottom(1));
+				results[m_links[i].m_dofOffset + 2] = n_local_lin[i+1].dot(m_links[i].getAxisBottom(2));
+
+				break;
+			}
+			default:
+			{
+				// TODO(JS): Add warning
+			}
+		}
+
+	}
+
+	// Now copy through to output.
+	//printf("jac[%d] = ", link);
+	// "downward" iteration (link to 1)
+	while (link_find_me_hehe != -1)
+	{
+		for(int dof = 0; dof < m_links[link_find_me_hehe].m_dofCount; ++dof)
+		{
+			const int index = m_links[link_find_me_hehe].m_dofOffset + dof;
+			jac[6 + index] = results[index];
+			//printf("%.2f\t", jac[6 + m_links[link].m_dofOffset + dof]);
+		}
+
+		link_find_me_hehe = m_links[link_find_me_hehe].m_parent;
+	}
+	//printf("]\n");
 }
 
 

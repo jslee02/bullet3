@@ -528,6 +528,9 @@ void btMultiBodyConstraintSolver::setupMultiBodyContactConstraint(btMultiBodySol
 
 	cfm *= invTimeStep;
 
+	// TODO(JS): For self-collision, we don't need to run calcAccelerationDeltasMultiDof()
+	// twice.
+
 	if (multiBodyA)
 	{
 		if (solverConstraint.m_linkA<0)
@@ -539,6 +542,7 @@ void btMultiBodyConstraintSolver::setupMultiBodyContactConstraint(btMultiBodySol
 		}
 		const int ndofA  = multiBodyA->getNumDofs() + 6;
 
+		// TODO(JS): what is this for?
 		solverConstraint.m_deltaVelAindex = multiBodyA->getCompanionId();
 
 		if (solverConstraint.m_deltaVelAindex <0)
@@ -910,6 +914,7 @@ void btMultiBodyConstraintSolver::setupMultiBodyTorsionalFrictionConstraint(btMu
         m_data.m_deltaVelocitiesUnitImpulse.resize(m_data.m_deltaVelocitiesUnitImpulse.size()+ndofA);
         btAssert(m_data.m_jacobians.size() == m_data.m_deltaVelocitiesUnitImpulse.size());
         
+        // Conduct uint impulse test to compute reactive velocity change against the unit impulse
         btScalar* jac1=&m_data.m_jacobians[solverConstraint.m_jacAindex];
         multiBodyA->fillConstraintJacobianMultiDof(solverConstraint.m_linkA, cp.getPositionWorldOnA(), constraintNormal, btVector3(0,0,0), jac1, m_data.scratch_r, m_data.scratch_v, m_data.scratch_m);
         btScalar* delta = &m_data.m_deltaVelocitiesUnitImpulse[solverConstraint.m_jacAindex];
@@ -1206,8 +1211,8 @@ void	btMultiBodyConstraintSolver::convertMultiBodyContact(btPersistentManifold* 
 	colObj0 = (btCollisionObject*)manifold->getBody0();
 	colObj1 = (btCollisionObject*)manifold->getBody1();
 
-	int solverBodyIdA = mbA? -1 : getOrInitSolverBody(*colObj0,infoGlobal.m_timeStep);
-	int solverBodyIdB = mbB ? -1 : getOrInitSolverBody(*colObj1,infoGlobal.m_timeStep);
+	const int solverBodyIdA = mbA? -1 : getOrInitSolverBody(*colObj0,infoGlobal.m_timeStep);
+	const int solverBodyIdB = mbB ? -1 : getOrInitSolverBody(*colObj1,infoGlobal.m_timeStep);
 
 //	btSolverBody* solverBodyA = mbA ? 0 : &m_tmpSolverBodyPool[solverBodyIdA];
 //	btSolverBody* solverBodyB = mbB ? 0 : &m_tmpSolverBodyPool[solverBodyIdB];
@@ -1513,12 +1518,13 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 		btMultiBodySolverConstraint& solverConstraint = m_multiBodyNormalContactConstraints[i];
 		writeBackSolverBodyToMultiBody(solverConstraint,infoGlobal.m_timeStep);
 
-		writeBackSolverBodyToMultiBody(m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex],infoGlobal.m_timeStep);
+		// TODO(JS): For debug
+//		writeBackSolverBodyToMultiBody(m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex],infoGlobal.m_timeStep);
 
-		if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
-		{
-			writeBackSolverBodyToMultiBody(m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex+1],infoGlobal.m_timeStep);
-		}
+//		if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
+//		{
+//			writeBackSolverBodyToMultiBody(m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex+1],infoGlobal.m_timeStep);
+//		}
 	}
 
 
@@ -1538,13 +1544,14 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 			btManifoldPoint* pt = (btManifoldPoint*) solverConstraint.m_originalContactPoint;
 			btAssert(pt);
 			pt->m_appliedImpulse = solverConstraint.m_appliedImpulse;
-			pt->m_appliedImpulseLateral1 = m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex].m_appliedImpulse;
+			// TODO(JS): For debug
+//			pt->m_appliedImpulseLateral1 = m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex].m_appliedImpulse;
 			
-			//printf("pt->m_appliedImpulseLateral1 = %f\n", pt->m_appliedImpulseLateral1);
-			if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
-			{
-				pt->m_appliedImpulseLateral2 = m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex+1].m_appliedImpulse;
-			}
+//			//printf("pt->m_appliedImpulseLateral1 = %f\n", pt->m_appliedImpulseLateral1);
+//			if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
+//			{
+//				pt->m_appliedImpulseLateral2 = m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex+1].m_appliedImpulse;
+//			}
 			//do a callback here?
 		}
 	}

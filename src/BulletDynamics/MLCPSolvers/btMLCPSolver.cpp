@@ -201,7 +201,7 @@ void btMLCPSolver::createMLCPFast(const btContactSolverInfo& infoGlobal)
 	}
 
 	//
-	int m=m_allConstraintPtrArray.size();
+	const int m=m_allConstraintPtrArray.size();
 
 	int numBodies = m_tmpSolverBodyPool.size();
 	btAlignedObjectArray<int> bodyJointNodeArray;

@@ -442,10 +442,22 @@ void addJointTorque(int i, btScalar Q);
                              btScalar *jac,
                              btAlignedObjectArray<btScalar> &scratch_r,
                              btAlignedObjectArray<btVector3> &scratch_v,
-							 btAlignedObjectArray<btMatrix3x3> &scratch_m) const { fillConstraintJacobianMultiDof(link, contact_point, btVector3(0, 0, 0), normal, jac, scratch_r, scratch_v, scratch_m); }
+							 btAlignedObjectArray<btMatrix3x3> &scratch_m) const
+	{
+		fillConstraintJacobianMultiDof(
+			link,
+			contact_point,
+			btVector3(0, 0, 0),
+			normal,
+			jac,
+			scratch_r,
+			scratch_v,
+			scratch_m);
+	}
 
 	//a more general version of fillContactJacobianMultiDof which does not assume..
 	//.. that the constraint in question is contact or, to be more precise, constrains linear velocity only
+	/// \param[in] jac Size: 6 + ?
 	void fillConstraintJacobianMultiDof(int link,
                              const btVector3 &contact_point,
 							 const btVector3 &normal_ang,
@@ -479,6 +491,7 @@ void addJointTorque(int i, btScalar Q);
 		    return m_fixedBase;
 	}
 
+	/// ?
 	int getCompanionId() const
 	{
 		return m_companionId;
@@ -699,6 +712,7 @@ private:
 	int m_userIndex2;
 	int m_userIndex;
 
+	/// ?
 	int	m_companionId;
 	btScalar	m_linearDamping;
 	btScalar	m_angularDamping;

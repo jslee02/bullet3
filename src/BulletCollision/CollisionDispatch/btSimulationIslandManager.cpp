@@ -239,8 +239,12 @@ void btSimulationIslandManager::buildIslands(btDispatcher* dispatcher,btCollisio
 	for ( startIslandIndex=0;startIslandIndex<numElem;startIslandIndex = endIslandIndex)
 	{
 		int islandId = getUnionFind().getElement(startIslandIndex).m_id;
-		for (endIslandIndex = startIslandIndex+1;(endIslandIndex<numElem) && (getUnionFind().getElement(endIslandIndex).m_id == islandId);endIslandIndex++)
+		for (endIslandIndex = startIslandIndex + 1;
+			 (endIslandIndex < numElem)
+			 && (getUnionFind().getElement(endIslandIndex).m_id == islandId);
+			 endIslandIndex++)
 		{
+			// Do nothing
 		}
 
 		//int numSleeping = 0;
@@ -248,11 +252,11 @@ void btSimulationIslandManager::buildIslands(btDispatcher* dispatcher,btCollisio
 		bool allSleeping = true;
 
 		int idx;
-		for (idx=startIslandIndex;idx<endIslandIndex;idx++)
+		for (idx = startIslandIndex; idx < endIslandIndex; idx++)
 		{
-			int i = getUnionFind().getElement(idx).m_sz;
+			const int i = getUnionFind().getElement(idx).m_sz;
 
-			btCollisionObject* colObj0 = collisionObjects[i];
+			const btCollisionObject* colObj0 = collisionObjects[i];
 			if ((colObj0->getIslandTag() != islandId) && (colObj0->getIslandTag() != -1))
 			{
 //				printf("error in island management\n");
@@ -420,7 +424,7 @@ void btSimulationIslandManager::buildAndProcessIslands(btDispatcher* dispatcher,
 		
 
 	//	printf("Start Islands\n");
-
+		int num = 0;
 		//traverse the simulation islands, and call the solver, unless all objects are sleeping/deactivated
 		for ( startIslandIndex=0;startIslandIndex<numElem;startIslandIndex = endIslandIndex)
 		{
@@ -429,7 +433,9 @@ void btSimulationIslandManager::buildAndProcessIslands(btDispatcher* dispatcher,
 
 			   bool islandSleeping = true;
 	                
-					for (endIslandIndex = startIslandIndex;(endIslandIndex<numElem) && (getUnionFind().getElement(endIslandIndex).m_id == islandId);endIslandIndex++)
+					for (endIslandIndex = startIslandIndex;
+						 (endIslandIndex<numElem) && (getUnionFind().getElement(endIslandIndex).m_id == islandId);
+						 endIslandIndex++)
 					{
 							int i = getUnionFind().getElement(endIslandIndex).m_sz;
 							btCollisionObject* colObj0 = collisionObjects[i];
