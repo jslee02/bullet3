@@ -391,7 +391,6 @@ btScalar btMultiBodyConstraint::fillMultiBodyConstraint(	btMultiBodySolverConstr
         
         btScalar  penetrationImpulse = positionalError*solverConstraint.m_jacDiagABInv;
         btScalar velocityImpulse = velocityError *solverConstraint.m_jacDiagABInv;
-        // TODO(JS): Just a note, this isn't necessary for MLCP solver for multibody
         
 		//split impulse is not implemented yet for btMultiBody*
 

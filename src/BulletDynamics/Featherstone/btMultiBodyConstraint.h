@@ -25,17 +25,11 @@ struct btSolverInfo;
 
 #include "btMultiBodySolverConstraint.h"
 
-/// POD for impulse-based dynamics of multibody
 struct btMultiBodyJacobianData
 {
 	btAlignedObjectArray<btScalar>		m_jacobians;
-
-	/// Holds the joint-space response of the corresp. tree to the test impulse in each constraint space dimension
-	btAlignedObjectArray<btScalar>		m_deltaVelocitiesUnitImpulse;
-
-	/// Holds joint-space vectors of all the constrained trees accumulating the effect of corrective impulses applied in
-	/// SI
-	btAlignedObjectArray<btScalar>		m_deltaVelocities;
+	btAlignedObjectArray<btScalar>		m_deltaVelocitiesUnitImpulse;	//holds the joint-space response of the corresp. tree to the test impulse in each constraint space dimension
+	btAlignedObjectArray<btScalar>		m_deltaVelocities;				//holds joint-space vectors of all the constrained trees accumulating the effect of corrective impulses applied in SI
 	btAlignedObjectArray<btScalar>		scratch_r;
 	btAlignedObjectArray<btVector3>		scratch_v;
 	btAlignedObjectArray<btMatrix3x3>	scratch_m;

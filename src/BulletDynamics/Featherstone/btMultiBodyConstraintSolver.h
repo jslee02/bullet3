@@ -37,7 +37,6 @@ protected:
 	btMultiBodyConstraintArray			m_multiBodyNormalContactConstraints;
 	btMultiBodyConstraintArray			m_multiBodyFrictionContactConstraints;
 	btMultiBodyConstraintArray			m_multiBodyTorsionalFrictionContactConstraints;
-	// TODO(JS): Torsional friction contact constrain is not being handled, which should be added soon.
 
 	btMultiBodyJacobianData				m_data;
 	
@@ -84,7 +83,7 @@ protected:
 //	virtual btScalar solveGroupCacheFriendlyIterations(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 
 	virtual btScalar solveSingleIteration(int iteration, btCollisionObject** bodies ,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
-	void	applyDeltaVee(const btScalar* deltaV, btScalar impulse, int velocityIndex, int ndof);
+	void	applyDeltaVee(btScalar* deltaV, btScalar impulse, int velocityIndex, int ndof);
 	void writeBackSolverBodyToMultiBody(btMultiBodySolverConstraint& constraint, btScalar deltaTime);
 public:
 

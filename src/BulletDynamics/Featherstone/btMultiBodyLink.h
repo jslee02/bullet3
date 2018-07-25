@@ -57,7 +57,7 @@ struct btMultibodyLink
 
     btQuaternion m_zeroRotParentToThis;    // rotates vectors in parent-frame to vectors in local-frame (when q=0). constant.
 
-	btVector3 m_dVector;   // vector from the inboard joint pos to this link's COM. (local frame.) constant.
+    btVector3 m_dVector;   // vector from the inboard joint pos to this link's COM. (local frame.) constant.
 	//this is set to zero for planar joint (see also m_eVector comment)
 	
     // m_eVector is constant, but depends on the joint type:
@@ -201,8 +201,6 @@ btVector3 m_appliedConstraintForce;    // In WORLD frame
 			case eRevolute:
 			{
 				m_cachedRotParentToThis = btQuaternion(getAxisTop(0),-pJointPos[0]) * m_zeroRotParentToThis;
-
-				// TODO(JS): m_dVector is thisPivotToThisComOffset
 				m_cachedRVector = m_dVector + quatRotate(m_cachedRotParentToThis,m_eVector);
 
 				break;
