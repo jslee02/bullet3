@@ -609,7 +609,7 @@ btScalar btMLCPSolver::solveGroupCacheFriendlyIterations(btCollisionObject** bod
 				btSolverBody& solverBodyB = m_tmpSolverBodyPool[sbB];
  
 				{
-					btScalar deltaImpulse = m_x[i]-c.m_appliedImpulse;
+					const btScalar deltaImpulse = m_x[i]-c.m_appliedImpulse;
 					c.m_appliedImpulse = m_x[i];
 					solverBodyA.internalApplyImpulse(c.m_contactNormal1*solverBodyA.internalGetInvMass(),c.m_angularComponentA,deltaImpulse);
 					solverBodyB.internalApplyImpulse(c.m_contactNormal2*solverBodyB.internalGetInvMass(),c.m_angularComponentB,deltaImpulse);
@@ -617,7 +617,7 @@ btScalar btMLCPSolver::solveGroupCacheFriendlyIterations(btCollisionObject** bod
 
 				if (infoGlobal.m_splitImpulse)
 				{
-					btScalar deltaImpulse = m_xSplit[i] - c.m_appliedPushImpulse;
+					const btScalar deltaImpulse = m_xSplit[i] - c.m_appliedPushImpulse;
 					solverBodyA.internalApplyPushImpulse(c.m_contactNormal1*solverBodyA.internalGetInvMass(),c.m_angularComponentA,deltaImpulse);
 					solverBodyB.internalApplyPushImpulse(c.m_contactNormal2*solverBodyB.internalGetInvMass(),c.m_angularComponentB,deltaImpulse);
 					c.m_appliedPushImpulse = m_xSplit[i];

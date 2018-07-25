@@ -51,6 +51,8 @@ ATTRIBUTE_ALIGNED16 (struct)	btMultiBodySolverConstraint
 
 	btScalar	m_friction;
 	btScalar	m_jacDiagABInv;
+
+	///
 	btScalar		m_rhs;
 	btScalar		m_cfm;
 	

@@ -17,26 +17,31 @@ subject to the following restrictions:
 #define BT_MULTIBODY_MLCP_CONSTRAINT_SOLVER_H
 
 #include "LinearMath/btMatrixX.h"
-#include "BulletDynamics/Featherstone/btMultiBodyConstraint.h"
+#include "LinearMath/btThreads.h"
 #include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
-#include "BulletDynamics/MLCPSolvers/btMLCPSolverInterface.h"
 
-#define DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
-
+class btMLCPSolverInterface;
 class btMultiBody;
 
-// TODO(JS): btRigidBody vs btRigidBody isn't handled for now
 class btMultiBodyMLCPConstraintSolver : public btMultiBodyConstraintSolver
 {
 protected:
-	/// \name Boxed LCP formulation
+	/// \name MLCP formulation
 	/// \{
 
-	// TODO(JS): Consider using Eigen, which is suggested by Erwin
+	/// A matrix in the MLCP formulation
 	btMatrixXu m_A;
+
+	/// b vector in the MLCP formulation.
 	btVectorXu m_b;
+
+	/// Constraint impulse, which is an output of MLCP solving.
 	btVectorXu m_x;
+
+	/// Lower bound of constraint impulse, \c m_x.
 	btVectorXu m_lo;
+
+	/// Upper bound of constraint impulse, \c m_x.
 	btVectorXu m_hi;
 
 	/// \}
@@ -45,42 +50,37 @@ protected:
 	/// When using 'split impulse' we solve two separate (M)LCPs
 	/// \{
 
+	/// Split impulse Cache vector corresponding to \c m_b.
 	btVectorXu m_bSplit;
+
+	/// Split impulse cache vector corresponding to \c m_x.
 	btVectorXu m_xSplit;
-	btVectorXu m_bSplit1;
-	btVectorXu m_xSplit2;
 
 	/// \}
 
+	/// Indices to normal constraint associated with frictional contact constraint.
+	///
+	/// This is used by the MLCP solver to update the upper bounds of frictional contact impulse given intermediate normal contact impulse.
 	btAlignedObjectArray<int> m_limitDependencies;
-	btAlignedObjectArray<btSolverConstraint*> m_allConstraintPtrArray;
+
+	/// Array of all the multibody constraints
+	btAlignedObjectArray<btMultiBodySolverConstraint*> m_allConstraintPtrArray;
+
+	/// MLCP solver
 	btMLCPSolverInterface* m_solver;
+
+	/// Count of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
 	int m_fallback;
 
-	/// \name Scratch Variables
-	/// The following scratch variables are not stateful -- contents are cleared prior to each use.
-	/// They are only cached here to avoid extra memory allocations and deallocations and to ensure
-	/// that multiple instances of the solver can be run in parallel.
-	/// \{
-
-	btMatrixXu m_scratchJ3;
-	btMatrixXu m_scratchJInvM3;
-	btAlignedObjectArray<int> m_scratchOfs;
-	btMatrixXu m_scratchMInv;
-	btMatrixXu m_scratchJ;
-	btMatrixXu m_scratchJTranspose;
-	btMatrixXu m_scratchTmp;
-
-	/// \}
-
-	/// Creates Mixed LCP
+	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
 	virtual void createMLCPFast(const btContactSolverInfo& infoGlobal);
 
-	//return true is it solves the problem successfully
+	/// Solves MLCP and returns the success
 	virtual bool solveMLCP(const btContactSolverInfo& infoGlobal);
+	// Note: Identical to btMLCPSolver::solveMLCP().
 
 	// Documentation inherited
-	virtual btScalar solveGroupCacheFriendlySetup(
+	btScalar solveGroupCacheFriendlySetup(
 		btCollisionObject** bodies,
 		int numBodies,
 		btPersistentManifold** manifoldPtr,
@@ -88,45 +88,39 @@ protected:
 		btTypedConstraint** constraints,
 		int numConstraints,
 		const btContactSolverInfo& infoGlobal,
-		btIDebugDraw* debugDrawer);
+		btIDebugDraw* debugDrawer) BT_OVERRIDE;
 
 	// Documentation inherited
-	virtual btScalar solveGroupCacheFriendlyIterations(
+	btScalar solveGroupCacheFriendlyIterations(
 		btCollisionObject** bodies ,
 		int numBodies,btPersistentManifold** manifoldPtr,
 		int numManifolds,btTypedConstraint** constraints,
 		int numConstraints,
 		const btContactSolverInfo& infoGlobal,
-		btIDebugDraw* debugDrawer);
-
-	// Documentation inherited
-	void convertContacts(btPersistentManifold** manifoldPtr, int numManifolds,
-						 const btContactSolverInfo& infoGlobal) override;
-
-	void convertMultiBodyContact(btPersistentManifold* manifold, const btContactSolverInfo& infoGlobal);
-
-	// Setup m_data here
-	void setupMultiBodyContactConstraint(btMultiBodySolverConstraint& solverConstraint, const btVector3& contactNormal,
-										 btManifoldPoint& cp, const btContactSolverInfo& infoGlobal,
-										 btScalar& relaxation, bool isFriction, btScalar desiredVelocity = 0,
-										 btScalar cfmSlip = 0);
-	// TODO(JS): Remove jacDiagABInv
-
-	void applyDeltaVee(btScalar* deltaV, btScalar impulse, int velocityIndex, int ndof);
+		btIDebugDraw* debugDrawer) BT_OVERRIDE;
 
 public:
 	BT_DECLARE_ALIGNED_ALLOCATOR()
 
-	btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver);
+	/// Constructor
+	///
+	/// \param[in] solver MLCP solver. Assumed it's not null.
+	explicit btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver);
 
+	/// Destructor
 	virtual ~btMultiBodyMLCPConstraintSolver();
 
+	/// Sets MLCP solver
 	void setMLCPSolver(btMLCPSolverInterface* solver);
 
+	/// Returns the number of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
 	int getNumFallbacks() const;
+
+	/// Sets the number of fallbacks. This function may be used to reset the number to zero.
 	void setNumFallbacks(int num);
 
-	virtual btConstraintSolverType	getSolverType() const;
+	/// Returns the constraint solver type.
+	virtual btConstraintSolverType getSolverType() const;
 };
 
 #endif  // BT_MULTIBODY_MLCP_CONSTRAINT_SOLVER_H

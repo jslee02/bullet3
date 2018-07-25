@@ -186,7 +186,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(btCollisionOb
 	return val;
 }
 
-void	btMultiBodyConstraintSolver::applyDeltaVee(btScalar* delta_vee, btScalar impulse, int velocityIndex, int ndof)
+void	btMultiBodyConstraintSolver::applyDeltaVee(const btScalar* delta_vee, btScalar impulse, int velocityIndex, int ndof)
 {
     for (int i = 0; i < ndof; ++i) 
 		m_data.m_deltaVelocities[velocityIndex+i] += delta_vee[i] * impulse;
