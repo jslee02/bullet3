@@ -220,6 +220,8 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 	const btContactSolverInfo& infoGlobal,
 	btIDebugDraw* debugDrawer)
 {
+	printf("MLCP\n");
+
 	btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(
 		bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 

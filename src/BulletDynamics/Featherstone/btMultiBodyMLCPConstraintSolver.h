@@ -26,7 +26,7 @@ class btMultiBody;
 class btMultiBodyMLCPConstraintSolver : public btMultiBodyConstraintSolver
 {
 protected:
-	/// \name MLCP formulation
+	/// \name MLCP Formulation
 	/// \{
 
 	/// A matrix in the MLCP formulation
@@ -112,7 +112,7 @@ public:
 	/// Destructor
 	virtual ~btMultiBodyMLCPConstraintSolver();
 
-	/// Sets MLCP solver
+	/// Sets MLCP solver. Assumed it's not null.
 	void setMLCPSolver(btMLCPSolverInterface* solver);
 
 	/// Returns the number of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
