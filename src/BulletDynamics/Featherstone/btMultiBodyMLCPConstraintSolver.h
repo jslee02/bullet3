@@ -92,9 +92,11 @@ protected:
 
 	// Documentation inherited
 	btScalar solveGroupCacheFriendlyIterations(
-		btCollisionObject** bodies ,
-		int numBodies,btPersistentManifold** manifoldPtr,
-		int numManifolds,btTypedConstraint** constraints,
+		btCollisionObject** bodies,
+		int numBodies,
+		btPersistentManifold** manifoldPtr,
+		int numManifolds,
+		btTypedConstraint** constraints,
 		int numConstraints,
 		const btContactSolverInfo& infoGlobal,
 		btIDebugDraw* debugDrawer) BT_OVERRIDE;
