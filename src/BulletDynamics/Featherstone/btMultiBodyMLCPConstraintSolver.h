@@ -78,18 +78,6 @@ protected:
 
 	/// \}
 
-	/// \name Cache Variables for Split Impulse for Multibodies
-	/// When using 'split impulse' we solve two separate (M)LCPs
-	/// \{
-
-	/// Split impulse Cache vector corresponding to \c m_b.
-	btVectorXu m_multiBodyBSplit;
-
-	/// Split impulse cache vector corresponding to \c m_x.
-	btVectorXu m_multiBodyXSplit;
-
-	/// \}
-
 	/// Indices of normal contact constraint associated with frictional contact constraint for rigid bodies.
 	///
 	/// This is used by the MLCP solver to update the upper bounds of frictional contact impulse given intermediate
@@ -129,7 +117,6 @@ protected:
 
 	/// Solves MLCP and returns the success
 	virtual bool solveMLCP(const btContactSolverInfo& infoGlobal);
-	// Note: Identical to btMLCPSolver::solveMLCP().
 
 	// Documentation inherited
 	btScalar solveGroupCacheFriendlySetup(
