@@ -26,7 +26,7 @@ class btMultiBody;
 class btMultiBodyMLCPConstraintSolver : public btMultiBodyConstraintSolver
 {
 protected:
-	/// \name MLCP Formulation
+	/// \name MLCP Formulation for Rigid Bodies
 	/// \{
 
 	/// A matrix in the MLCP formulation
@@ -46,7 +46,7 @@ protected:
 
 	/// \}
 
-	/// \name Cache Variables for Split Impulse
+	/// \name Cache Variables for Split Impulse for Rigid Bodies
 	/// When using 'split impulse' we solve two separate (M)LCPs
 	/// \{
 
@@ -58,13 +58,59 @@ protected:
 
 	/// \}
 
-	/// Indices to normal constraint associated with frictional contact constraint.
+	/// \name MLCP Formulation for Multibodies
+	/// \{
+
+	/// A matrix in the MLCP formulation
+	btMatrixXu m_multiBodyA;
+
+	/// b vector in the MLCP formulation.
+	btVectorXu m_multiBodyB;
+
+	/// Constraint impulse, which is an output of MLCP solving.
+	btVectorXu m_multiBodyX;
+
+	/// Lower bound of constraint impulse, \c m_x.
+	btVectorXu m_multiBodyLo;
+
+	/// Upper bound of constraint impulse, \c m_x.
+	btVectorXu m_multiBodyHi;
+
+	/// \}
+
+	/// \name Cache Variables for Split Impulse for Multibodies
+	/// When using 'split impulse' we solve two separate (M)LCPs
+	/// \{
+
+	/// Split impulse Cache vector corresponding to \c m_b.
+	btVectorXu m_multiBodyBSplit;
+
+	/// Split impulse cache vector corresponding to \c m_x.
+	btVectorXu m_multiBodyXSplit;
+
+	/// \}
+
+	/// Indices of normal contact constraint associated with frictional contact constraint for rigid bodies.
 	///
-	/// This is used by the MLCP solver to update the upper bounds of frictional contact impulse given intermediate normal contact impulse.
+	/// This is used by the MLCP solver to update the upper bounds of frictional contact impulse given intermediate
+	/// normal contact impulse. For example, i-th element represents the index of a normal constraint that is
+	/// accosiated with i-th frictional contact constraint if i-th constraint is a frictional contact constraint.
+	/// Otherwise, -1.
 	btAlignedObjectArray<int> m_limitDependencies;
 
+	/// Indices of normal contact constraint associated with frictional contact constraint for multibodies.
+	///
+	/// This is used by the MLCP solver to update the upper bounds of frictional contact impulse given intermediate
+	/// normal contact impulse. For example, i-th element represents the index of a normal constraint that is
+	/// accosiated with i-th frictional contact constraint if i-th constraint is a frictional contact constraint.
+	/// Otherwise, -1.
+	btAlignedObjectArray<int> m_multiBodyLimitDependencies;
+
+	/// Array of all the rigid body constraints
+	btAlignedObjectArray<btSolverConstraint*> m_allConstraintPtrArray;
+
 	/// Array of all the multibody constraints
-	btAlignedObjectArray<btMultiBodySolverConstraint*> m_allConstraintPtrArray;
+	btAlignedObjectArray<btMultiBodySolverConstraint*> m_multiBodyAllConstraintPtrArray;
 
 	/// MLCP solver
 	btMLCPSolverInterface* m_solver;
@@ -74,6 +120,12 @@ protected:
 
 	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
 	virtual void createMLCPFast(const btContactSolverInfo& infoGlobal);
+
+	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
+	virtual void createMLCPFastRigidBody(const btContactSolverInfo& infoGlobal);
+
+	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
+	virtual void createMLCPFastMultiBody(const btContactSolverInfo& infoGlobal);
 
 	/// Solves MLCP and returns the success
 	virtual bool solveMLCP(const btContactSolverInfo& infoGlobal);
@@ -115,7 +167,8 @@ public:
 	/// Sets MLCP solver. Assumed it's not null.
 	void setMLCPSolver(btMLCPSolverInterface* solver);
 
-	/// Returns the number of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
+	/// Returns the number of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP
+	/// solver fails.
 	int getNumFallbacks() const;
 
 	/// Sets the number of fallbacks. This function may be used to reset the number to zero.

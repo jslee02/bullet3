@@ -1,4 +1,4 @@
-#include "MultiBodyConstraintSolvers.h"
+#include "BoxStacks.h"
 #include "../OpenGLWindow/SimpleOpenGL3App.h"
 #include "btBulletDynamicsCommon.h"
 
@@ -22,11 +22,11 @@
 
 static bool useMCLPSolver = true;  //false;
 
-class MultiBodyConstraintSolvers : public CommonMultiBodyBase
+class BoxStacks : public CommonMultiBodyBase
 {
 public:
-	MultiBodyConstraintSolvers(GUIHelperInterface* helper);
-	virtual ~MultiBodyConstraintSolvers();
+	BoxStacks(GUIHelperInterface* helper);
+	virtual ~BoxStacks();
 
 	virtual void initPhysics();
 
@@ -42,6 +42,7 @@ public:
 	}
 
 	btMultiBody* createFeatherstoneMultiBody_testMultiDof(class btMultiBodyDynamicsWorld* world, int numLinks, const btVector3& basePosition, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents, bool spherical = false, bool floating = false);
+	btMultiBody* createBoxStack(class btMultiBodyDynamicsWorld* world, const btVector3& basePosition, const btVector3& baseHalfExtents);
 	void addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBodyDynamicsWorld* pWorld, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents);
 	void addBoxes_testMultiDof();
 };
@@ -62,24 +63,24 @@ static float friction = 1.;
 #define START_POS_Y 2
 #define START_POS_Z -3
 
-MultiBodyConstraintSolvers::MultiBodyConstraintSolvers(GUIHelperInterface* helper)
+BoxStacks::BoxStacks(GUIHelperInterface* helper)
 	: CommonMultiBodyBase(helper)
 {
 	m_guiHelper->setUpAxis(1);
 }
-MultiBodyConstraintSolvers::~MultiBodyConstraintSolvers()
+BoxStacks::~BoxStacks()
 {
 	// Do nothing
 }
 
-void MultiBodyConstraintSolvers::stepSimulation(float deltaTime)
+void BoxStacks::stepSimulation(float deltaTime)
 {
 	//use a smaller internal timestep, there are stability issues
 	float internalTimeStep = 1. / 240.f;
 	m_dynamicsWorld->stepSimulation(deltaTime, 10, internalTimeStep);
 }
 
-void MultiBodyConstraintSolvers::initPhysics()
+void BoxStacks::initPhysics()
 {
 	m_guiHelper->setUpAxis(1);
 
@@ -98,18 +99,9 @@ void MultiBodyConstraintSolvers::initPhysics()
 	m_broadphase = new btDbvtBroadphase();
 
 	//Use the btMultiBodyConstraintSolver for Featherstone btMultiBody support
-	//
-	if (useMCLPSolver)
-	{
-		btDantzigSolver* mlcp = new btDantzigSolver();
-		//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-		m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
-	}
-	else
-	{
-		m_solver = new btMultiBodyConstraintSolver;
-	}
-	useMCLPSolver = !useMCLPSolver;
+	btDantzigSolver* mlcp = new btDantzigSolver();
+	//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
+	m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
 
 	//use btMultiBodyDynamicsWorld for Featherstone btMultiBody support
 	btMultiBodyDynamicsWorld* world = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
@@ -299,7 +291,7 @@ void MultiBodyConstraintSolvers::initPhysics()
 	/////////////////////////////////////////////////////////////////
 }
 
-btMultiBody* MultiBodyConstraintSolvers::createFeatherstoneMultiBody_testMultiDof(btMultiBodyDynamicsWorld* pWorld, int numLinks, const btVector3& basePosition, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents, bool spherical, bool fixedBase)
+btMultiBody* BoxStacks::createFeatherstoneMultiBody_testMultiDof(btMultiBodyDynamicsWorld* pWorld, int numLinks, const btVector3& basePosition, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents, bool spherical, bool fixedBase)
 {
 	//init the base
 	btVector3 baseInertiaDiag(0.f, 0.f, 0.f);
@@ -359,7 +351,30 @@ btMultiBody* MultiBodyConstraintSolvers::createFeatherstoneMultiBody_testMultiDo
 	return pMultiBody;
 }
 
-void MultiBodyConstraintSolvers::addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBodyDynamicsWorld* pWorld, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents)
+btMultiBody* BoxStacks::createBoxStack(btMultiBodyDynamicsWorld* pWorld, const btVector3& basePosition, const btVector3& baseHalfExtents)
+{
+	// Mass
+	const btScalar baseMass = 1.0;
+
+	// Inertia
+	const btCollisionShape* pTempBox = new btBoxShape(btVector3(baseHalfExtents[0], baseHalfExtents[1], baseHalfExtents[2]));
+	btVector3 baseInertiaDiag;
+	pTempBox->calculateLocalInertia(baseMass, baseInertiaDiag);
+	delete pTempBox;
+
+	// Create a multibody
+	btMultiBody* pMultiBody = new btMultiBody(0, baseMass, baseInertiaDiag, false, false);
+	pMultiBody->setBasePos(basePosition);
+	pMultiBody->setWorldToBaseRot(btQuaternion(0.f, 0.f, 0.f, 1.f));
+	pMultiBody->finalizeMultiDof();
+
+	// Add to the world
+	pWorld->addMultiBody(pMultiBody);
+
+	return pMultiBody;
+}
+
+void BoxStacks::addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBodyDynamicsWorld* pWorld, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents)
 {
 	btAlignedObjectArray<btQuaternion> world_to_local;
 	world_to_local.resize(pMultiBody->getNumLinks() + 1);
@@ -422,7 +437,7 @@ void MultiBodyConstraintSolvers::addColliders_testMultiDof(btMultiBody* pMultiBo
 	}
 }
 
-void MultiBodyConstraintSolvers::addBoxes_testMultiDof()
+void BoxStacks::addBoxes_testMultiDof()
 {
 	//create a few dynamic rigidbodies
 	// Re-using the same collision is better for memory usage and performance
@@ -470,7 +485,7 @@ void MultiBodyConstraintSolvers::addBoxes_testMultiDof()
 	}
 }
 
-CommonExampleInterface* MultiBodyConstraintSolversCreateFunc(CommonExampleOptions& options)
+CommonExampleInterface* BoxStacksCreateFunc(CommonExampleOptions& options)
 {
-	return new MultiBodyConstraintSolvers(options.m_guiHelper);
+	return new BoxStacks(options.m_guiHelper);
 }

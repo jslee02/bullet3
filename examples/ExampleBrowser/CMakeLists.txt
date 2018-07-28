@@ -327,6 +327,7 @@ SET(BulletExampleBrowser_SRCS
   ../MultiBody/InvertedPendulumPDControl.h
  ../MultiBody/MultiBodyConstraintFeedback.cpp
   ../MultiBody/MultiBodyConstraintSolvers.cpp
+  ../MultiBody/BoxStacks.cpp
   ../MultiBody/MultiDofDemo.cpp
   ../MultiBody/MultiDofDemo.h
   ../RigidBody/RigidBodySoftContact.cpp
