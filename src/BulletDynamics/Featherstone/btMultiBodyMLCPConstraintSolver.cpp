@@ -344,17 +344,9 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastRigidBody(const btContactSol
 
 		for (int i = 0; i < numConstraints; ++i)
 		{
-			if (0)  //m_limitDependencies[i]>=0)
-			{
-				m_lo[i] = -BT_INFINITY;
-				m_hi[i] = BT_INFINITY;
-			}
-			else
-			{
-				const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
-				m_lo[i] = constraint.m_lowerLimit;
-				m_hi[i] = constraint.m_upperLimit;
-			}
+			const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
+			m_lo[i] = constraint.m_lowerLimit;
+			m_hi[i] = constraint.m_upperLimit;
 		}
 	}
 
@@ -388,13 +380,10 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastRigidBody(const btContactSol
 		}
 	}
 
-	if (1)
+	// Add CFM to the diagonal of m_A
+	for (int i = 0; i < m_A.rows(); ++i)
 	{
-		// Add CFM to the diagonal of m_A
-		for (int i = 0; i < m_A.rows(); ++i)
-		{
-			m_A.setElem(i, i, m_A(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
-		}
+		m_A.setElem(i, i, m_A(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
 	}
 
 	// 4. Initialize x
@@ -455,17 +444,9 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastMultiBody(const btContactSol
 
 		for (int i = 0; i < multiBodyNumConstraints; ++i)
 		{
-			if (0)  //m_limitDependencies[i]>=0)
-			{
-				m_multiBodyLo[i] = -BT_INFINITY;
-				m_multiBodyHi[i] = BT_INFINITY;
-			}
-			else
-			{
-				const btMultiBodySolverConstraint& constraint = *m_multiBodyAllConstraintPtrArray[i];
-				m_multiBodyLo[i] = constraint.m_lowerLimit;
-				m_multiBodyHi[i] = constraint.m_upperLimit;
-			}
+			const btMultiBodySolverConstraint& constraint = *m_multiBodyAllConstraintPtrArray[i];
+			m_multiBodyLo[i] = constraint.m_lowerLimit;
+			m_multiBodyHi[i] = constraint.m_upperLimit;
 		}
 	}
 
@@ -500,13 +481,10 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastMultiBody(const btContactSol
 		}
 	}
 
-	if (1)
+	// Add CFM to the diagonal of m_A
+	for (int i = 0; i < m_multiBodyA.rows(); ++i)
 	{
-		// Add CFM to the diagonal of m_A
-		for (int i = 0; i < m_multiBodyA.rows(); ++i)
-		{
-			m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
-		}
+		m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
 	}
 
 	// 4. Initialize x
