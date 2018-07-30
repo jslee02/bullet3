@@ -52,18 +52,20 @@ static btScalar computeConstraintMatrixDiagElementRigidBody(
 
 	const int solverBodyIdA = constraint.m_solverBodyIdA;
 	const btSolverBody* solverBodyA = &solverBodyPool[solverBodyIdA];
+	const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
 	ret += dot(
-		constraint.m_relpos1CrossNormal,           // angular delta velocity per unit impulse
-		constraint.m_angularComponentA,            // linear delta velocity per unit impulse
-		solverBodyA->m_originalBody->getInvMass()  // mass inverse
+		constraint.m_relpos1CrossNormal,  // angular delta velocity per unit impulse
+		constraint.m_angularComponentA,   // linear delta velocity per unit impulse
+		invMassA                          // mass inverse
 	);
 
 	const int solverBodyIdB = constraint.m_solverBodyIdB;
 	const btSolverBody* solverBodyB = &solverBodyPool[solverBodyIdB];
+	const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
 	ret += dot(
-		constraint.m_relpos2CrossNormal,           // angular delta velocity per unit impulse
-		constraint.m_angularComponentB,            // linear delta velocity per unit impulse
-		solverBodyB->m_originalBody->getInvMass()  // mass inverse
+		constraint.m_relpos2CrossNormal,  // angular delta velocity per unit impulse
+		constraint.m_angularComponentB,   // linear delta velocity per unit impulse
+		invMassB                          // mass inverse
 	);
 
 	return ret;
@@ -85,15 +87,18 @@ static btScalar computeConstraintMatrixOffDiagElementRigidBody(
 	const btSolverBody* offDiagSolverBodyA = &solverBodyPool[offDiagSolverBodyIdA];
 	const btSolverBody* offDiagSolverBodyB = &solverBodyPool[offDiagSolverBodyIdB];
 
+	const btScalar invMassA = offDiagSolverBodyA->m_originalBody ? offDiagSolverBodyA->m_originalBody->getInvMass() : 0.0;
+	const btScalar invMassB = offDiagSolverBodyB->m_originalBody ? offDiagSolverBodyB->m_originalBody->getInvMass() : 0.0;
+
 	// The constraint associated with offDiagSolverBodyId is bodyA, but different contact point
 	if (offDiagSolverBodyIdA == solverBodyIdA)
 	{
 		// Use the same velocity change per unit impulse of bodyA, but use the constraint Jacobian of offDiagSolverBodyIdA
 		ret += dot(
-			constraint.m_angularComponentA,                                                        // angular delta velocity per unit impulse
-			constraint.m_contactNormal1,                                                           // linear delta velocity per unit impulse
-			offDiagConstraint.m_relpos1CrossNormal,                                                // angular constraint Jacobian
-			offDiagConstraint.m_contactNormal1 * offDiagSolverBodyA->m_originalBody->getInvMass()  // linear constraint Jacobian
+			constraint.m_angularComponentA,                // angular delta velocity per unit impulse
+			constraint.m_contactNormal1,                   // linear delta velocity per unit impulse
+			offDiagConstraint.m_relpos1CrossNormal,        // angular constraint Jacobian
+			offDiagConstraint.m_contactNormal1 * invMassA  // linear constraint Jacobian
 		);
 	}
 	// The constraint associated with offDiagSolverBodyId is bodyB, but different contact point
@@ -101,10 +106,10 @@ static btScalar computeConstraintMatrixOffDiagElementRigidBody(
 	{
 		// Use the same velocity change per unit impulse of bodyB, but use the constraint Jacobian of offDiagSolverBodyIdA
 		ret += dot(
-			constraint.m_angularComponentB,                                                        // angular delta velocity per unit impulse
-			constraint.m_contactNormal2,                                                           // linear delta velocity per unit impulse
-			offDiagConstraint.m_relpos1CrossNormal,                                                // angular constraint Jacobian
-			offDiagConstraint.m_contactNormal1 * offDiagSolverBodyA->m_originalBody->getInvMass()  // linear constraint Jacobian
+			constraint.m_angularComponentB,                // angular delta velocity per unit impulse
+			constraint.m_contactNormal2,                   // linear delta velocity per unit impulse
+			offDiagConstraint.m_relpos1CrossNormal,        // angular constraint Jacobian
+			offDiagConstraint.m_contactNormal1 * invMassA  // linear constraint Jacobian
 		);
 	}
 
@@ -113,10 +118,10 @@ static btScalar computeConstraintMatrixOffDiagElementRigidBody(
 	{
 		// Use the same velocity change per unit impulse of bodyA, but use the constraint Jacobian of offDiagSolverBodyIdB
 		ret += dot(
-			constraint.m_angularComponentA,                                                        // angular delta velocity per unit impulse
-			constraint.m_contactNormal1,                                                           // linear delta velocity per unit impulse
-			offDiagConstraint.m_relpos2CrossNormal,                                                // angular constraint Jacobian
-			offDiagConstraint.m_contactNormal2 * offDiagSolverBodyB->m_originalBody->getInvMass()  // linear constraint Jacobian
+			constraint.m_angularComponentA,                // angular delta velocity per unit impulse
+			constraint.m_contactNormal1,                   // linear delta velocity per unit impulse
+			offDiagConstraint.m_relpos2CrossNormal,        // angular constraint Jacobian
+			offDiagConstraint.m_contactNormal2 * invMassB  // linear constraint Jacobian
 		);
 	}
 	// The constraint associated with offDiagSolverBodyId is bodyB, but different contact point
@@ -124,10 +129,10 @@ static btScalar computeConstraintMatrixOffDiagElementRigidBody(
 	{
 		// Use the same velocity change per unit impulse of bodyB, but use the constraint Jacobian of offDiagSolverBodyIdB
 		ret += dot(
-			constraint.m_angularComponentB,                                                        // angular delta velocity per unit impulse
-			constraint.m_contactNormal2,                                                           // linear delta velocity per unit impulse
-			offDiagConstraint.m_relpos2CrossNormal,                                                // angular constraint Jacobian
-			offDiagConstraint.m_contactNormal2 * offDiagSolverBodyB->m_originalBody->getInvMass()  // linear constraint Jacobian
+			constraint.m_angularComponentB,                // angular delta velocity per unit impulse
+			constraint.m_contactNormal2,                   // linear delta velocity per unit impulse
+			offDiagConstraint.m_relpos2CrossNormal,        // angular constraint Jacobian
+			offDiagConstraint.m_contactNormal2 * invMassB  // linear constraint Jacobian
 		);
 	}
 
@@ -166,10 +171,11 @@ static btScalar computeConstraintMatrixDiagElementMultiBody(
 		const int solverBodyIdA = constraint.m_solverBodyIdA;
 		assert(solverBodyIdA != -1);
 		const btSolverBody* solverBodyA = &solverBodyPool[solverBodyIdA];
+		const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
 		ret += dot(
 			constraint.m_relpos1CrossNormal,
 			constraint.m_angularComponentA,
-			solverBodyA->m_originalBody->getInvMass());
+			invMassA);
 	}
 
 	if (multiBodyB)
@@ -184,10 +190,11 @@ static btScalar computeConstraintMatrixDiagElementMultiBody(
 		const int solverBodyIdB = constraint.m_solverBodyIdB;
 		assert(solverBodyIdB != -1);
 		const btSolverBody* solverBodyB = &solverBodyPool[solverBodyIdB];
+		const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
 		ret += dot(
 			constraint.m_relpos1CrossNormal,
 			constraint.m_angularComponentA,
-			solverBodyB->m_originalBody->getInvMass());
+			invMassB);
 	}
 
 	return ret;
@@ -236,11 +243,14 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 		const int offDiagSolverBodyIdA = offDiagConstraint.m_solverBodyIdA;
 		assert(offDiagSolverBodyIdA != -1);
 
+		const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
+		const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
+
 		if (offDiagSolverBodyIdA == solverBodyIdA)
 		{
 			offDiagA += dot(
 				constraint.m_angularComponentA,
-				solverBodyA->m_originalBody->getInvMass() * constraint.m_contactNormal1,
+				invMassA * constraint.m_contactNormal1,
 				offDiagConstraint.m_relpos1CrossNormal,
 				offDiagConstraint.m_contactNormal1);
 		}
@@ -248,7 +258,7 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 		{
 			offDiagA += dot(
 				constraint.m_angularComponentB,
-				solverBodyB->m_originalBody->getInvMass() * constraint.m_contactNormal2,
+				invMassB * constraint.m_contactNormal2,
 				offDiagConstraint.m_relpos1CrossNormal,
 				offDiagConstraint.m_contactNormal1);
 		}
@@ -279,11 +289,14 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 		const int offDiagSolverBodyIdB = offDiagConstraint.m_solverBodyIdA;
 		assert(offDiagSolverBodyIdB != -1);
 
+		const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
+		const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
+
 		if (offDiagSolverBodyIdB == solverBodyIdA)
 		{
 			offDiagA += dot(
 				constraint.m_angularComponentA,
-				solverBodyA->m_originalBody->getInvMass() * constraint.m_contactNormal1,
+				invMassA * constraint.m_contactNormal1,
 				offDiagConstraint.m_relpos2CrossNormal,
 				offDiagConstraint.m_contactNormal2);
 		}
@@ -291,7 +304,7 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 		{
 			offDiagA += dot(
 				constraint.m_angularComponentB,
-				solverBodyB->m_originalBody->getInvMass() * constraint.m_contactNormal2,
+				invMassB * constraint.m_contactNormal2,
 				offDiagConstraint.m_relpos2CrossNormal,
 				offDiagConstraint.m_contactNormal2);
 		}
@@ -309,6 +322,9 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFast(const btContactSolverInfo& 
 void btMultiBodyMLCPConstraintSolver::createMLCPFastRigidBody(const btContactSolverInfo& infoGlobal)
 {
 	const int numConstraints = m_allConstraintPtrArray.size();
+
+	if (numConstraints == 0)
+		return;
 
 	// 1. Compute b
 	{
@@ -414,6 +430,9 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastMultiBody(const btContactSol
 {
 	const int multiBodyNumConstraints = m_multiBodyAllConstraintPtrArray.size();
 
+	if (multiBodyNumConstraints == 0)
+		return;
+
 	// 1. Compute b
 	{
 		BT_PROFILE("init b (rhs)");
@@ -517,7 +536,7 @@ bool btMultiBodyMLCPConstraintSolver::solveMLCP(const btContactSolverInfo& infoG
 		// If using split impulse, we solve 2 separate (M)LCPs
 		if (infoGlobal.m_splitImpulse)
 		{
-			const btMatrixXu Acopy = m_multiBodyA;
+			const btMatrixXu Acopy = m_A;
 			const btAlignedObjectArray<int> limitDependenciesCopy = m_limitDependencies;
 			// TODO(JS): Do we really need these copies when solveMLCP takes them as const?
 
@@ -562,23 +581,20 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 	{
 		BT_PROFILE("gather constraint data");
 
-		const int numFrictionPerContact = m_tmpSolverContactConstraintPool.size() == m_tmpSolverContactFrictionConstraintPool.size() ? 1 : 2;
-		const int numtiBodyNumFrictionPerContact = m_multiBodyNormalContactConstraints.size() == m_multiBodyFrictionContactConstraints.size() ? 1 : 2;
-
-		m_allConstraintPtrArray.resize(0);
-		m_multiBodyAllConstraintPtrArray.resize(0);
-
-		m_multiBodyLimitDependencies.resize(m_tmpSolverNonContactConstraintPool.size() + m_tmpSolverContactConstraintPool.size() + m_tmpSolverContactFrictionConstraintPool.size() + m_multiBodyNonContactConstraints.size() + m_multiBodyNormalContactConstraints.size() + m_multiBodyFrictionContactConstraints.size());
-		btAssert(m_multiBodyLimitDependencies.size() == m_tmpSolverNonContactConstraintPool.size() + m_tmpSolverContactConstraintPool.size() + m_tmpSolverContactFrictionConstraintPool.size() + m_multiBodyNonContactConstraints.size() + m_multiBodyNormalContactConstraints.size() + m_multiBodyFrictionContactConstraints.size());
-
 		int dindex = 0;
 
 		// i. Setup for rigid bodies
 
+		const int numFrictionPerContact = m_tmpSolverContactConstraintPool.size() == m_tmpSolverContactFrictionConstraintPool.size() ? 1 : 2;
+
+		m_allConstraintPtrArray.resize(0);
+		m_limitDependencies.resize(m_tmpSolverNonContactConstraintPool.size() + m_tmpSolverContactConstraintPool.size() + m_tmpSolverContactFrictionConstraintPool.size());
+		btAssert(m_limitDependencies.size() == m_tmpSolverNonContactConstraintPool.size() + m_tmpSolverContactConstraintPool.size() + m_tmpSolverContactFrictionConstraintPool.size());
+
 		for (int i = 0; i < m_tmpSolverNonContactConstraintPool.size(); ++i)
 		{
 			m_allConstraintPtrArray.push_back(&m_tmpSolverNonContactConstraintPool[i]);
-			m_multiBodyLimitDependencies[dindex++] = -1;
+			m_limitDependencies[dindex++] = -1;
 		}
 
 		// The btSequentialImpulseConstraintSolver moves all friction constraints at the very end, we can also interleave them instead
@@ -590,14 +606,14 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 			for (int i = 0; i < m_tmpSolverContactConstraintPool.size(); i++)
 			{
 				m_allConstraintPtrArray.push_back(&m_tmpSolverContactConstraintPool[i]);
-				m_multiBodyLimitDependencies[dindex++] = -1;
+				m_limitDependencies[dindex++] = -1;
 				m_allConstraintPtrArray.push_back(&m_tmpSolverContactFrictionConstraintPool[i * numFrictionPerContact]);
 				int findex = (m_tmpSolverContactFrictionConstraintPool[i * numFrictionPerContact].m_frictionIndex * (1 + numFrictionPerContact));
-				m_multiBodyLimitDependencies[dindex++] = findex + firstContactConstraintOffset;
+				m_limitDependencies[dindex++] = findex + firstContactConstraintOffset;
 				if (numFrictionPerContact == 2)
 				{
 					m_allConstraintPtrArray.push_back(&m_tmpSolverContactFrictionConstraintPool[i * numFrictionPerContact + 1]);
-					m_multiBodyLimitDependencies[dindex++] = findex + firstContactConstraintOffset;
+					m_limitDependencies[dindex++] = findex + firstContactConstraintOffset;
 				}
 			}
 		}
@@ -606,16 +622,31 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 			for (int i = 0; i < m_tmpSolverContactConstraintPool.size(); i++)
 			{
 				m_allConstraintPtrArray.push_back(&m_tmpSolverContactConstraintPool[i]);
-				m_multiBodyLimitDependencies[dindex++] = -1;
+				m_limitDependencies[dindex++] = -1;
 			}
 			for (int i = 0; i < m_tmpSolverContactFrictionConstraintPool.size(); i++)
 			{
 				m_allConstraintPtrArray.push_back(&m_tmpSolverContactFrictionConstraintPool[i]);
-				m_multiBodyLimitDependencies[dindex++] = m_tmpSolverContactFrictionConstraintPool[i].m_frictionIndex + firstContactConstraintOffset;
+				m_limitDependencies[dindex++] = m_tmpSolverContactFrictionConstraintPool[i].m_frictionIndex + firstContactConstraintOffset;
 			}
 		}
 
+		if (!m_allConstraintPtrArray.size())
+		{
+			m_A.resize(0, 0);
+			m_b.resize(0);
+			m_x.resize(0);
+			m_lo.resize(0);
+			m_hi.resize(0);
+		}
+
 		// ii. Setup for multibodies
+
+		const int numtiBodyNumFrictionPerContact = m_multiBodyNormalContactConstraints.size() == m_multiBodyFrictionContactConstraints.size() ? 1 : 2;
+
+		m_multiBodyAllConstraintPtrArray.resize(0);
+		m_multiBodyLimitDependencies.resize(m_multiBodyNonContactConstraints.size() + m_multiBodyNormalContactConstraints.size() + m_multiBodyFrictionContactConstraints.size());
+		btAssert(m_multiBodyLimitDependencies.size() == m_multiBodyNonContactConstraints.size() + m_multiBodyNormalContactConstraints.size() + m_multiBodyFrictionContactConstraints.size());
 
 		for (int i = 0; i < m_multiBodyNonContactConstraints.size(); ++i)
 		{
@@ -671,8 +702,6 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 			m_multiBodyX.resize(0);
 			m_multiBodyLo.resize(0);
 			m_multiBodyHi.resize(0);
-
-			return btScalar(0);
 		}
 	}
 
