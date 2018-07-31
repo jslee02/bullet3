@@ -31,6 +31,8 @@ static btScalar dot(
 	const btVector3& angularJacobian,
 	const btVector3& linearJacobian)
 {
+	BT_PROFILE("dot");
+
 	return angularDeltaVelocity.dot(angularJacobian) + linearDeltaVelocity.dot(linearJacobian);
 }
 
@@ -48,6 +50,8 @@ static btScalar computeConstraintMatrixDiagElementRigidBody(
 	const btAlignedObjectArray<btSolverBody>& solverBodyPool,
 	const btSolverConstraint& constraint)
 {
+	BT_PROFILE("Compute diagonal");
+
 	btScalar ret = btScalar(0);
 
 	const int solverBodyIdA = constraint.m_solverBodyIdA;
@@ -76,6 +80,8 @@ static btScalar computeConstraintMatrixOffDiagElementRigidBody(
 	const btSolverConstraint& constraint,
 	const btSolverConstraint& offDiagConstraint)
 {
+	BT_PROFILE("Compute off diagonal");
+
 	btScalar ret = btScalar(0);
 
 	const int solverBodyIdA = constraint.m_solverBodyIdA;
@@ -375,23 +381,26 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastRigidBody(const btContactSol
 			m_A.resize(numConstraints, numConstraints);
 		}
 
-		for (int i = 0; i < numConstraints; ++i)
 		{
-			// Compute the diagonal of A, which is A(i, i)
-			const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
-			const btScalar diagA = computeConstraintMatrixDiagElementRigidBody(m_tmpSolverBodyPool, constraint);
-			m_A.setElem(i, i, diagA);
-
-			// Computes the off-diagonals of A:
-			//   a. The rest of i-th row of A, from A(i, i+1) to A(i, n)
-			//   b. The rest of i-th column of A, from A(i+1, i) to A(n, i)
-			for (int j = i + 1; j < numConstraints; ++j)
+			BT_PROFILE("m_A.setElem");
+			for (int i = 0; i < numConstraints; ++i)
 			{
-				// Set the off-diagonal values of A. Note that A is symmetric.
-				const btSolverConstraint& offDiagConstraint = *m_allConstraintPtrArray[j];
-				const btScalar offDiagA = computeConstraintMatrixOffDiagElementRigidBody(m_tmpSolverBodyPool, constraint, offDiagConstraint);
-				m_A.setElem(i, j, offDiagA);
-				m_A.setElem(j, i, offDiagA);
+				// Compute the diagonal of A, which is A(i, i)
+				const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
+				const btScalar diagA = computeConstraintMatrixDiagElementRigidBody(m_tmpSolverBodyPool, constraint);
+				m_A.setElem(i, i, diagA);
+
+				// Computes the off-diagonals of A:
+				//   a. The rest of i-th row of A, from A(i, i+1) to A(i, n)
+				//   b. The rest of i-th column of A, from A(i+1, i) to A(n, i)
+				for (int j = i + 1; j < numConstraints; ++j)
+				{
+					// Set the off-diagonal values of A. Note that A is symmetric.
+					const btSolverConstraint& offDiagConstraint = *m_allConstraintPtrArray[j];
+					const btScalar offDiagA = computeConstraintMatrixOffDiagElementRigidBody(m_tmpSolverBodyPool, constraint, offDiagConstraint);
+					m_A.setElem(i, j, offDiagA);
+					m_A.setElem(j, i, offDiagA);
+				}
 			}
 		}
 	}
@@ -705,6 +714,9 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 		}
 	}
 
+	if (m_allConstraintPtrArray.size() > m_maxLCPSize)
+		return 0;
+
 	// Construct MLCP terms
 	{
 		BT_PROFILE("createMLCPFast");
@@ -719,7 +731,14 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 	bool result = true;
 	{
 		BT_PROFILE("solveMLCP");
-		result = solveMLCP(infoGlobal);
+		if (m_allConstraintPtrArray.size() <= m_maxLCPSize || m_multiBodyAllConstraintPtrArray.size() <= m_maxLCPSize)
+		{
+			result = solveMLCP(infoGlobal);
+		}
+		else
+		{
+			result = false;
+		}
 	}
 
 	// Fallback to btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyIterations if the solution isn't valid.
@@ -787,8 +806,8 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 	return btScalar(0);
 }
 
-btMultiBodyMLCPConstraintSolver::btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver)
-	: m_solver(solver), m_fallback(0)
+btMultiBodyMLCPConstraintSolver::btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver, int maxLCPSize)
+	: m_solver(solver), m_maxLCPSize(maxLCPSize), m_fallback(0)
 {
 	// Do nothing
 }

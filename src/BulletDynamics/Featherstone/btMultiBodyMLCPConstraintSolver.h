@@ -103,6 +103,9 @@ protected:
 	/// MLCP solver
 	btMLCPSolverInterface* m_solver;
 
+	/// Maximum size of LCP to solve using MLCP solver. If the MLCP size exceeds this number, sequaltial impulse method will be used.
+	int m_maxLCPSize;
+
 	/// Count of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
 	int m_fallback;
 
@@ -146,7 +149,8 @@ public:
 	/// Constructor
 	///
 	/// \param[in] solver MLCP solver. Assumed it's not null.
-	explicit btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver);
+	/// \param[in] maxLCPSize Maximum size of LCP to solve using MLCP solver. If the MLCP size exceeds this number, sequaltial impulse method will be used.
+	explicit btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver, int maxLCPSize = 1000);
 
 	/// Destructor
 	virtual ~btMultiBodyMLCPConstraintSolver();
