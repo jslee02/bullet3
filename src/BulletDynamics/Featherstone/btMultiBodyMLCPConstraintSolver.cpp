@@ -238,6 +238,10 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastRigidBody(const btContactSol
 	int numContactRows = interleaveContactAndFriction ? 3 : 1;
 
 	int numConstraintRows = m_allConstraintPtrArray.size();
+
+	if (numConstraintRows == 0)
+		return;
+
 	int n = numConstraintRows;
 	{
 		BT_PROFILE("init b (rhs)");
