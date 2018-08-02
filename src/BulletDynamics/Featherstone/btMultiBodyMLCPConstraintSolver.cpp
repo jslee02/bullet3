@@ -22,6 +22,14 @@ subject to the following restrictions:
 
 #define DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
 
+struct btJointNode
+{
+	int jointIndex;          // pointer to enclosing dxJoint object
+	int otherBodyIndex;      // *other* body this joint is connected to
+	int nextJointNodeIndex;  //-1 for null
+	int constraintRowIndex;
+};
+
 static bool interleaveContactAndFriction = false;
 
 // Helper function to compute a delta velocity in the constraint space.
@@ -43,98 +51,6 @@ static btScalar computeDeltaVelocityInConstraintSpace(
 	const btVector3& angularJacobian)
 {
 	return angularDeltaVelocity.dot(angularJacobian) + invMass;
-}
-
-static btScalar computeConstraintMatrixDiagElementRigidBody(
-	const btAlignedObjectArray<btSolverBody>& solverBodyPool,
-	const btSolverConstraint& constraint)
-{
-	BT_PROFILE("Compute diagonal");
-
-	btScalar ret = btScalar(0);
-
-	const int solverBodyIdA = constraint.m_solverBodyIdA;
-	const btSolverBody* solverBodyA = &solverBodyPool[solverBodyIdA];
-	const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
-	ret += computeDeltaVelocityInConstraintSpace(
-		constraint.m_relpos1CrossNormal,
-		invMassA,
-		constraint.m_angularComponentA);
-
-	const int solverBodyIdB = constraint.m_solverBodyIdB;
-	const btSolverBody* solverBodyB = &solverBodyPool[solverBodyIdB];
-	const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
-	ret += computeDeltaVelocityInConstraintSpace(
-		constraint.m_relpos2CrossNormal,
-		invMassB,
-		constraint.m_angularComponentB);
-
-	return ret;
-}
-
-inline static btScalar computeConstraintMatrixOffDiagElementRigidBody(
-	const btAlignedObjectArray<btSolverBody>& solverBodyPool,
-	const btSolverConstraint& constraint,
-	const btSolverConstraint& offDiagConstraint)
-{
-	BT_PROFILE("Compute off diagonal");
-
-	btScalar ret = btScalar(0);
-
-	const int solverBodyIdA = constraint.m_solverBodyIdA;
-	const int solverBodyIdB = constraint.m_solverBodyIdB;
-
-	const int offDiagSolverBodyIdA = offDiagConstraint.m_solverBodyIdA;
-	const btSolverBody* offDiagSolverBodyA = &solverBodyPool[offDiagSolverBodyIdA];
-	const btScalar invMassA = offDiagSolverBodyA->m_originalBody ? offDiagSolverBodyA->m_originalBody->getInvMass() : 0.0;
-
-	// This means the BodyA of offDiagConstraint is BodyA, but the constraint Jacobian of offDiagConstraint is different from the one of constraint.
-	if (offDiagSolverBodyIdA == solverBodyIdA)
-	{
-		ret += computeDeltaVelocityInConstraintSpace(
-			constraint.m_angularComponentA,
-			constraint.m_contactNormal1,
-			invMassA,
-			offDiagConstraint.m_relpos1CrossNormal,
-			offDiagConstraint.m_contactNormal1);
-	}
-	// This means the BodyA of offDiagConstraint is BodyB, but the constraint Jacobian of offDiagConstraint is different from the one of constraint.
-	else if (offDiagSolverBodyIdA == solverBodyIdB)
-	{
-		ret += computeDeltaVelocityInConstraintSpace(
-			constraint.m_angularComponentB,
-			constraint.m_contactNormal2,
-			invMassA,
-			offDiagConstraint.m_relpos1CrossNormal,
-			offDiagConstraint.m_contactNormal1);
-	}
-
-	const int offDiagSolverBodyIdB = offDiagConstraint.m_solverBodyIdB;
-	const btSolverBody* offDiagSolverBodyB = &solverBodyPool[offDiagSolverBodyIdB];
-	const btScalar invMassB = offDiagSolverBodyB->m_originalBody ? offDiagSolverBodyB->m_originalBody->getInvMass() : 0.0;
-
-	// The constraint associated with offDiagSolverBodyId is bodyA, but different contact point
-	if (offDiagSolverBodyIdB == solverBodyIdA)
-	{
-		ret += computeDeltaVelocityInConstraintSpace(
-			constraint.m_angularComponentA,
-			constraint.m_contactNormal1,
-			invMassB,
-			offDiagConstraint.m_relpos2CrossNormal,
-			offDiagConstraint.m_contactNormal2);
-	}
-	// The constraint associated with offDiagSolverBodyId is bodyB, but different contact point
-	else if (offDiagSolverBodyIdB == solverBodyIdB)
-	{
-		ret += computeDeltaVelocityInConstraintSpace(
-			constraint.m_angularComponentB,
-			constraint.m_contactNormal2,
-			invMassB,
-			offDiagConstraint.m_relpos2CrossNormal,
-			offDiagConstraint.m_contactNormal2);
-	}
-
-	return ret;
 }
 
 // Helper function to compute a delta velocity in the constraint space.
@@ -319,105 +235,304 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFast(const btContactSolverInfo& 
 
 void btMultiBodyMLCPConstraintSolver::createMLCPFastRigidBody(const btContactSolverInfo& infoGlobal)
 {
-	const int numConstraints = m_allConstraintPtrArray.size();
+	int numContactRows = interleaveContactAndFriction ? 3 : 1;
 
-	if (numConstraints == 0)
-		return;
-
-	// 1. Compute b
+	int numConstraintRows = m_allConstraintPtrArray.size();
+	int n = numConstraintRows;
 	{
 		BT_PROFILE("init b (rhs)");
-
-		m_b.resize(numConstraints);
+		m_b.resize(numConstraintRows);
+		m_bSplit.resize(numConstraintRows);
 		m_b.setZero();
-
-		m_bSplit.resize(numConstraints);
 		m_bSplit.setZero();
-
-		for (int i = 0; i < numConstraints; ++i)
+		for (int i = 0; i < numConstraintRows; i++)
 		{
-			const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
-			const btScalar jacDiag = constraint.m_jacDiagABInv;
-
+			btScalar jacDiag = m_allConstraintPtrArray[i]->m_jacDiagABInv;
 			if (!btFuzzyZero(jacDiag))
 			{
-				const btScalar rhs = constraint.m_rhs;
-				const btScalar rhsPenetration = constraint.m_rhsPenetration;
+				btScalar rhs = m_allConstraintPtrArray[i]->m_rhs;
+				btScalar rhsPenetration = m_allConstraintPtrArray[i]->m_rhsPenetration;
 				m_b[i] = rhs / jacDiag;
 				m_bSplit[i] = rhsPenetration / jacDiag;
 			}
 		}
 	}
 
-	// 2. Compute lo and hi
+	//	btScalar* w = 0;
+	//	int nub = 0;
+
+	m_lo.resize(numConstraintRows);
+	m_hi.resize(numConstraintRows);
+
 	{
 		BT_PROFILE("init lo/ho");
 
-		m_lo.resize(numConstraints);
-		m_hi.resize(numConstraints);
-
-		for (int i = 0; i < numConstraints; ++i)
+		for (int i = 0; i < numConstraintRows; i++)
 		{
-			const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
-			m_lo[i] = constraint.m_lowerLimit;
-			m_hi[i] = constraint.m_upperLimit;
-		}
-	}
-
-	// 3. Construct A matrix by using the impulse testing
-	{
-		BT_PROFILE("Compute A");
-
-		{
-			BT_PROFILE("m_A.resize");
-			m_A.resize(numConstraints, numConstraints);
-		}
-
-		{
-			BT_PROFILE("m_A.setElem");
-			for (int i = 0; i < numConstraints; ++i)
+			if (0)  //m_limitDependencies[i]>=0)
 			{
-				// Compute the diagonal of A, which is A(i, i)
-				const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
-				const btScalar diagA = computeConstraintMatrixDiagElementRigidBody(m_tmpSolverBodyPool, constraint);
-				m_A.setElem(i, i, diagA);
-
-				// Computes the off-diagonals of A:
-				//   a. The rest of i-th row of A, from A(i, i+1) to A(i, n)
-				//   b. The rest of i-th column of A, from A(i+1, i) to A(n, i)
-				for (int j = i + 1; j < numConstraints; ++j)
-				{
-					// Set the off-diagonal values of A. Note that A is symmetric.
-					const btSolverConstraint& offDiagConstraint = *m_allConstraintPtrArray[j];
-					const btScalar offDiagA = computeConstraintMatrixOffDiagElementRigidBody(m_tmpSolverBodyPool, constraint, offDiagConstraint);
-					//					const btScalar offDiagA = 0;
-					m_A.setElem(i, j, offDiagA);
-					m_A.setElem(j, i, offDiagA);
-				}
+				m_lo[i] = -BT_INFINITY;
+				m_hi[i] = BT_INFINITY;
+			}
+			else
+			{
+				m_lo[i] = m_allConstraintPtrArray[i]->m_lowerLimit;
+				m_hi[i] = m_allConstraintPtrArray[i]->m_upperLimit;
 			}
 		}
 	}
 
-	// Add CFM to the diagonal of m_A
-	for (int i = 0; i < m_A.rows(); ++i)
+	//
+	int m = m_allConstraintPtrArray.size();
+
+	int numBodies = m_tmpSolverBodyPool.size();
+	btAlignedObjectArray<int> bodyJointNodeArray;
 	{
-		m_A.setElem(i, i, m_A(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
+		BT_PROFILE("bodyJointNodeArray.resize");
+		bodyJointNodeArray.resize(numBodies, -1);
+	}
+	btAlignedObjectArray<btJointNode> jointNodeArray;
+	{
+		BT_PROFILE("jointNodeArray.reserve");
+		jointNodeArray.reserve(2 * m_allConstraintPtrArray.size());
 	}
 
-	// 4. Initialize x
+	btMatrixXu& J3 = m_scratchJ3;
+	{
+		BT_PROFILE("J3.resize");
+		J3.resize(2 * m, 8);
+	}
+	btMatrixXu& JinvM3 = m_scratchJInvM3;
+	{
+		BT_PROFILE("JinvM3.resize/setZero");
+
+		JinvM3.resize(2 * m, 8);
+		JinvM3.setZero();
+		J3.setZero();
+	}
+	int cur = 0;
+	int rowOffset = 0;
+	btAlignedObjectArray<int>& ofs = m_scratchOfs;
+	{
+		BT_PROFILE("ofs resize");
+		ofs.resize(0);
+		ofs.resizeNoInitialize(m_allConstraintPtrArray.size());
+	}
+	{
+		BT_PROFILE("Compute J and JinvM");
+		int c = 0;
+
+		int numRows = 0;
+
+		for (int i = 0; i < m_allConstraintPtrArray.size(); i += numRows, c++)
+		{
+			ofs[c] = rowOffset;
+			int sbA = m_allConstraintPtrArray[i]->m_solverBodyIdA;
+			int sbB = m_allConstraintPtrArray[i]->m_solverBodyIdB;
+			btRigidBody* orgBodyA = m_tmpSolverBodyPool[sbA].m_originalBody;
+			btRigidBody* orgBodyB = m_tmpSolverBodyPool[sbB].m_originalBody;
+
+			numRows = i < m_tmpSolverNonContactConstraintPool.size() ? m_tmpConstraintSizesPool[c].m_numConstraintRows : numContactRows;
+			if (orgBodyA)
+			{
+				{
+					int slotA = -1;
+					//find free jointNode slot for sbA
+					slotA = jointNodeArray.size();
+					jointNodeArray.expand();  //NonInitializing();
+					int prevSlot = bodyJointNodeArray[sbA];
+					bodyJointNodeArray[sbA] = slotA;
+					jointNodeArray[slotA].nextJointNodeIndex = prevSlot;
+					jointNodeArray[slotA].jointIndex = c;
+					jointNodeArray[slotA].constraintRowIndex = i;
+					jointNodeArray[slotA].otherBodyIndex = orgBodyB ? sbB : -1;
+				}
+				for (int row = 0; row < numRows; row++, cur++)
+				{
+					btVector3 normalInvMass = m_allConstraintPtrArray[i + row]->m_contactNormal1 * orgBodyA->getInvMass();
+					btVector3 relPosCrossNormalInvInertia = m_allConstraintPtrArray[i + row]->m_relpos1CrossNormal * orgBodyA->getInvInertiaTensorWorld();
+
+					for (int r = 0; r < 3; r++)
+					{
+						J3.setElem(cur, r, m_allConstraintPtrArray[i + row]->m_contactNormal1[r]);
+						J3.setElem(cur, r + 4, m_allConstraintPtrArray[i + row]->m_relpos1CrossNormal[r]);
+						JinvM3.setElem(cur, r, normalInvMass[r]);
+						JinvM3.setElem(cur, r + 4, relPosCrossNormalInvInertia[r]);
+					}
+					J3.setElem(cur, 3, 0);
+					JinvM3.setElem(cur, 3, 0);
+					J3.setElem(cur, 7, 0);
+					JinvM3.setElem(cur, 7, 0);
+				}
+			}
+			else
+			{
+				cur += numRows;
+			}
+			if (orgBodyB)
+			{
+				{
+					int slotB = -1;
+					//find free jointNode slot for sbA
+					slotB = jointNodeArray.size();
+					jointNodeArray.expand();  //NonInitializing();
+					int prevSlot = bodyJointNodeArray[sbB];
+					bodyJointNodeArray[sbB] = slotB;
+					jointNodeArray[slotB].nextJointNodeIndex = prevSlot;
+					jointNodeArray[slotB].jointIndex = c;
+					jointNodeArray[slotB].otherBodyIndex = orgBodyA ? sbA : -1;
+					jointNodeArray[slotB].constraintRowIndex = i;
+				}
+
+				for (int row = 0; row < numRows; row++, cur++)
+				{
+					btVector3 normalInvMassB = m_allConstraintPtrArray[i + row]->m_contactNormal2 * orgBodyB->getInvMass();
+					btVector3 relPosInvInertiaB = m_allConstraintPtrArray[i + row]->m_relpos2CrossNormal * orgBodyB->getInvInertiaTensorWorld();
+
+					for (int r = 0; r < 3; r++)
+					{
+						J3.setElem(cur, r, m_allConstraintPtrArray[i + row]->m_contactNormal2[r]);
+						J3.setElem(cur, r + 4, m_allConstraintPtrArray[i + row]->m_relpos2CrossNormal[r]);
+						JinvM3.setElem(cur, r, normalInvMassB[r]);
+						JinvM3.setElem(cur, r + 4, relPosInvInertiaB[r]);
+					}
+					J3.setElem(cur, 3, 0);
+					JinvM3.setElem(cur, 3, 0);
+					J3.setElem(cur, 7, 0);
+					JinvM3.setElem(cur, 7, 0);
+				}
+			}
+			else
+			{
+				cur += numRows;
+			}
+			rowOffset += numRows;
+		}
+	}
+
+	//compute JinvM = J*invM.
+	const btScalar* JinvM = JinvM3.getBufferPointer();
+
+	const btScalar* Jptr = J3.getBufferPointer();
+	{
+		BT_PROFILE("m_A.resize");
+		m_A.resize(n, n);
+	}
+
+	{
+		BT_PROFILE("m_A.setZero");
+		m_A.setZero();
+	}
+	int c = 0;
+	{
+		int numRows = 0;
+		BT_PROFILE("Compute A");
+		for (int i = 0; i < m_allConstraintPtrArray.size(); i += numRows, c++)
+		{
+			int row__ = ofs[c];
+			int sbA = m_allConstraintPtrArray[i]->m_solverBodyIdA;
+			int sbB = m_allConstraintPtrArray[i]->m_solverBodyIdB;
+			//	btRigidBody* orgBodyA = m_tmpSolverBodyPool[sbA].m_originalBody;
+			//	btRigidBody* orgBodyB = m_tmpSolverBodyPool[sbB].m_originalBody;
+
+			numRows = i < m_tmpSolverNonContactConstraintPool.size() ? m_tmpConstraintSizesPool[c].m_numConstraintRows : numContactRows;
+
+			const btScalar* JinvMrow = JinvM + 2 * 8 * (size_t)row__;
+
+			{
+				int startJointNodeA = bodyJointNodeArray[sbA];
+				while (startJointNodeA >= 0)
+				{
+					int j0 = jointNodeArray[startJointNodeA].jointIndex;
+					int cr0 = jointNodeArray[startJointNodeA].constraintRowIndex;
+					if (j0 < c)
+					{
+						int numRowsOther = cr0 < m_tmpSolverNonContactConstraintPool.size() ? m_tmpConstraintSizesPool[j0].m_numConstraintRows : numContactRows;
+						size_t ofsother = (m_allConstraintPtrArray[cr0]->m_solverBodyIdB == sbA) ? 8 * numRowsOther : 0;
+						//printf("%d joint i %d and j0: %d: ",count++,i,j0);
+						m_A.multiplyAdd2_p8r(JinvMrow,
+											 Jptr + 2 * 8 * (size_t)ofs[j0] + ofsother, numRows, numRowsOther, row__, ofs[j0]);
+					}
+					startJointNodeA = jointNodeArray[startJointNodeA].nextJointNodeIndex;
+				}
+			}
+
+			{
+				int startJointNodeB = bodyJointNodeArray[sbB];
+				while (startJointNodeB >= 0)
+				{
+					int j1 = jointNodeArray[startJointNodeB].jointIndex;
+					int cj1 = jointNodeArray[startJointNodeB].constraintRowIndex;
+
+					if (j1 < c)
+					{
+						int numRowsOther = cj1 < m_tmpSolverNonContactConstraintPool.size() ? m_tmpConstraintSizesPool[j1].m_numConstraintRows : numContactRows;
+						size_t ofsother = (m_allConstraintPtrArray[cj1]->m_solverBodyIdB == sbB) ? 8 * numRowsOther : 0;
+						m_A.multiplyAdd2_p8r(JinvMrow + 8 * (size_t)numRows,
+											 Jptr + 2 * 8 * (size_t)ofs[j1] + ofsother, numRows, numRowsOther, row__, ofs[j1]);
+					}
+					startJointNodeB = jointNodeArray[startJointNodeB].nextJointNodeIndex;
+				}
+			}
+		}
+
+		{
+			BT_PROFILE("compute diagonal");
+			// compute diagonal blocks of m_A
+
+			int row__ = 0;
+			int numJointRows = m_allConstraintPtrArray.size();
+
+			int jj = 0;
+			for (; row__ < numJointRows;)
+			{
+				//int sbA = m_allConstraintPtrArray[row__]->m_solverBodyIdA;
+				int sbB = m_allConstraintPtrArray[row__]->m_solverBodyIdB;
+				//	btRigidBody* orgBodyA = m_tmpSolverBodyPool[sbA].m_originalBody;
+				btRigidBody* orgBodyB = m_tmpSolverBodyPool[sbB].m_originalBody;
+
+				const unsigned int infom = row__ < m_tmpSolverNonContactConstraintPool.size() ? m_tmpConstraintSizesPool[jj].m_numConstraintRows : numContactRows;
+
+				const btScalar* JinvMrow = JinvM + 2 * 8 * (size_t)row__;
+				const btScalar* Jrow = Jptr + 2 * 8 * (size_t)row__;
+				m_A.multiply2_p8r(JinvMrow, Jrow, infom, infom, row__, row__);
+				if (orgBodyB)
+				{
+					m_A.multiplyAdd2_p8r(JinvMrow + 8 * (size_t)infom, Jrow + 8 * (size_t)infom, infom, infom, row__, row__);
+				}
+				row__ += infom;
+				jj++;
+			}
+		}
+	}
+
+	if (1)
+	{
+		// add cfm to the diagonal of m_A
+		for (int i = 0; i < m_A.rows(); ++i)
+		{
+			m_A.setElem(i, i, m_A(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
+		}
+	}
+
+	///fill the upper triangle of the matrix, to make it symmetric
+	{
+		BT_PROFILE("fill the upper triangle ");
+		m_A.copyLowerToUpperTriangle();
+	}
+
 	{
 		BT_PROFILE("resize/init x");
-
-		m_x.resize(numConstraints);
-		m_xSplit.resize(numConstraints);
+		m_x.resize(numConstraintRows);
+		m_xSplit.resize(numConstraintRows);
 
 		if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 		{
-			for (int i = 0; i < numConstraints; ++i)
+			for (int i = 0; i < m_allConstraintPtrArray.size(); i++)
 			{
-				const btSolverConstraint& constraint = *m_allConstraintPtrArray[i];
-				m_x[i] = constraint.m_appliedImpulse;
-				m_xSplit[i] = constraint.m_appliedPushImpulse;
+				const btSolverConstraint& c = *m_allConstraintPtrArray[i];
+				m_x[i] = c.m_appliedImpulse;
+				m_xSplit[i] = c.m_appliedPushImpulse;
 			}
 		}
 		else

@@ -106,6 +106,24 @@ protected:
 	/// Count of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
 	int m_fallback;
 
+	/// \name MLCP Scratch Variables
+	/// The following scratch variables are not stateful -- contents are cleared prior to each use.
+	/// They are only cached here to avoid extra memory allocations and deallocations and to ensure
+	/// that multiple instances of the solver can be run in parallel.
+	///
+	/// \{
+
+	/// Cache variable for constraint Jacobian matrix.
+	btMatrixXu m_scratchJ3;
+
+	/// Cache variable for constraint Jacobian times inverse mass matrix.
+	btMatrixXu m_scratchJInvM3;
+
+	/// Cache variable for offsets.
+	btAlignedObjectArray<int> m_scratchOfs;
+
+	/// \}
+
 	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
 	virtual void createMLCPFast(const btContactSolverInfo& infoGlobal);
 
