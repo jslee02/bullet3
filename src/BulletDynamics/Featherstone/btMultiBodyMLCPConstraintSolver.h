@@ -103,20 +103,17 @@ protected:
 	/// MLCP solver
 	btMLCPSolverInterface* m_solver;
 
-	/// Maximum size of LCP to solve using MLCP solver. If the MLCP size exceeds this number, sequaltial impulse method will be used.
-	int m_maxLCPSize;
-
 	/// Count of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
 	int m_fallback;
 
 	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
 	virtual void createMLCPFast(const btContactSolverInfo& infoGlobal);
 
-	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
-	virtual void createMLCPFastRigidBody(const btContactSolverInfo& infoGlobal);
+	/// Constructs MLCP terms for constraints of two rigid bodies
+	void createMLCPFastRigidBody(const btContactSolverInfo& infoGlobal);
 
-	/// Constructs MLCP terms, which are \c m_A, \c m_b, \c m_lo, and \c m_hi.
-	virtual void createMLCPFastMultiBody(const btContactSolverInfo& infoGlobal);
+	/// Constructs MLCP terms for constraints of two multi-bodies or one rigid body and one multibody
+	void createMLCPFastMultiBody(const btContactSolverInfo& infoGlobal);
 
 	/// Solves MLCP and returns the success
 	virtual bool solveMLCP(const btContactSolverInfo& infoGlobal);
@@ -150,7 +147,7 @@ public:
 	///
 	/// \param[in] solver MLCP solver. Assumed it's not null.
 	/// \param[in] maxLCPSize Maximum size of LCP to solve using MLCP solver. If the MLCP size exceeds this number, sequaltial impulse method will be used.
-	explicit btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver, int maxLCPSize = 1000);
+	explicit btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver);
 
 	/// Destructor
 	virtual ~btMultiBodyMLCPConstraintSolver();
