@@ -22,6 +22,8 @@ subject to the following restrictions:
 
 #define DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
 
+static bool interleaveContactAndFriction = false;
+
 struct btJointNode
 {
 	int jointIndex;          // pointer to enclosing dxJoint object
@@ -29,8 +31,6 @@ struct btJointNode
 	int nextJointNodeIndex;  //-1 for null
 	int constraintRowIndex;
 };
-
-static bool interleaveContactAndFriction = false;
 
 // Helper function to compute a delta velocity in the constraint space.
 static btScalar computeDeltaVelocityInConstraintSpace(
