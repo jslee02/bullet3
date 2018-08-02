@@ -123,13 +123,12 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 
 	const btMultiBody* multiBodyA = constraint.m_multiBodyA;
 	const btMultiBody* multiBodyB = constraint.m_multiBodyB;
-	const btScalar* deltaA = &data.m_deltaVelocitiesUnitImpulse[constraint.m_jacAindex];
-	const btScalar* deltaB = &data.m_deltaVelocitiesUnitImpulse[constraint.m_jacBindex];
-	const int ndofA = multiBodyA->getNumDofs() + 6;
-	const int ndofB = multiBodyB->getNumDofs() + 6;
-
 	const btMultiBody* offDiagMultiBodyA = offDiagConstraint.m_multiBodyA;
 	const btMultiBody* offDiagMultiBodyB = offDiagConstraint.m_multiBodyB;
+
+	// Assumed at least one system is multibody
+	assert(multiBodyA || multiBodyB);
+	assert(offDiagMultiBodyA || offDiagMultiBodyB);
 
 	if (offDiagMultiBodyA)
 	{
@@ -137,10 +136,14 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 
 		if (offDiagMultiBodyA == multiBodyA)
 		{
+			const int ndofA = multiBodyA->getNumDofs() + 6;
+			const btScalar* deltaA = &data.m_deltaVelocitiesUnitImpulse[constraint.m_jacAindex];
 			offDiagA += computeDeltaVelocityInConstraintSpace(deltaA, offDiagJacA, ndofA);
 		}
 		else if (offDiagMultiBodyA == multiBodyB)
 		{
+			const int ndofB = multiBodyB->getNumDofs() + 6;
+			const btScalar* deltaB = &data.m_deltaVelocitiesUnitImpulse[constraint.m_jacBindex];
 			offDiagA += computeDeltaVelocityInConstraintSpace(deltaB, offDiagJacA, ndofB);
 		}
 	}
@@ -148,19 +151,15 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 	{
 		const int solverBodyIdA = constraint.m_solverBodyIdA;
 		const int solverBodyIdB = constraint.m_solverBodyIdB;
-		assert(solverBodyIdA != -1);
-		assert(solverBodyIdB != -1);
-		const btSolverBody* solverBodyA = &solverBodyPool[solverBodyIdA];
-		const btSolverBody* solverBodyB = &solverBodyPool[solverBodyIdB];
 
 		const int offDiagSolverBodyIdA = offDiagConstraint.m_solverBodyIdA;
 		assert(offDiagSolverBodyIdA != -1);
 
-		const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
-		const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
-
 		if (offDiagSolverBodyIdA == solverBodyIdA)
 		{
+			assert(solverBodyIdA != -1);
+			const btSolverBody* solverBodyA = &solverBodyPool[solverBodyIdA];
+			const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
 			offDiagA += computeDeltaVelocityInConstraintSpace(
 				offDiagConstraint.m_relpos1CrossNormal,
 				offDiagConstraint.m_contactNormal1,
@@ -169,6 +168,9 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 		}
 		else if (offDiagSolverBodyIdA == solverBodyIdB)
 		{
+			assert(solverBodyIdB != -1);
+			const btSolverBody* solverBodyB = &solverBodyPool[solverBodyIdB];
+			const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
 			offDiagA += computeDeltaVelocityInConstraintSpace(
 				offDiagConstraint.m_relpos1CrossNormal,
 				offDiagConstraint.m_contactNormal1,
@@ -184,10 +186,14 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 
 		if (offDiagMultiBodyB == multiBodyA)
 		{
+			const int ndofA = multiBodyA->getNumDofs() + 6;
+			const btScalar* deltaA = &data.m_deltaVelocitiesUnitImpulse[constraint.m_jacAindex];
 			offDiagA += computeDeltaVelocityInConstraintSpace(deltaA, offDiagJacB, ndofA);
 		}
 		else if (offDiagMultiBodyB == multiBodyB)
 		{
+			const int ndofB = multiBodyB->getNumDofs() + 6;
+			const btScalar* deltaB = &data.m_deltaVelocitiesUnitImpulse[constraint.m_jacBindex];
 			offDiagA += computeDeltaVelocityInConstraintSpace(deltaB, offDiagJacB, ndofB);
 		}
 	}
@@ -195,19 +201,15 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 	{
 		const int solverBodyIdA = constraint.m_solverBodyIdA;
 		const int solverBodyIdB = constraint.m_solverBodyIdB;
-		assert(solverBodyIdA != -1);
-		assert(solverBodyIdB != -1);
-		const btSolverBody* solverBodyA = &solverBodyPool[solverBodyIdA];
-		const btSolverBody* solverBodyB = &solverBodyPool[solverBodyIdB];
 
-		const int offDiagSolverBodyIdB = offDiagConstraint.m_solverBodyIdA;
+		const int offDiagSolverBodyIdB = offDiagConstraint.m_solverBodyIdB;
 		assert(offDiagSolverBodyIdB != -1);
-
-		const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
-		const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
 
 		if (offDiagSolverBodyIdB == solverBodyIdA)
 		{
+			assert(solverBodyIdA != -1);
+			const btSolverBody* solverBodyA = &solverBodyPool[solverBodyIdA];
+			const btScalar invMassA = solverBodyA->m_originalBody ? solverBodyA->m_originalBody->getInvMass() : 0.0;
 			offDiagA += computeDeltaVelocityInConstraintSpace(
 				offDiagConstraint.m_relpos2CrossNormal,
 				offDiagConstraint.m_contactNormal2,
@@ -216,6 +218,9 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 		}
 		else if (offDiagSolverBodyIdB == solverBodyIdB)
 		{
+			assert(solverBodyIdB != -1);
+			const btSolverBody* solverBodyB = &solverBodyPool[solverBodyIdB];
+			const btScalar invMassB = solverBodyB->m_originalBody ? solverBodyB->m_originalBody->getInvMass() : 0.0;
 			offDiagA += computeDeltaVelocityInConstraintSpace(
 				offDiagConstraint.m_relpos2CrossNormal,
 				offDiagConstraint.m_contactNormal2,
@@ -766,6 +771,8 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 
 		// ii. Setup for multibodies
 
+		dindex = 0;
+
 		m_multiBodyLimitDependencies.resize(numMultiBodyConstraints);
 
 		for (int i = 0; i < m_multiBodyNonContactConstraints.size(); ++i)
@@ -856,22 +863,24 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 		for (int i = 0; i < m_allConstraintPtrArray.size(); ++i)
 		{
 			const btSolverConstraint& c = *m_allConstraintPtrArray[i];
+
+			const btScalar deltaImpulse = m_x[i] - c.m_appliedImpulse;
+			c.m_appliedImpulse = m_x[i];
+
 			int sbA = c.m_solverBodyIdA;
 			int sbB = c.m_solverBodyIdB;
 
 			btSolverBody& solverBodyA = m_tmpSolverBodyPool[sbA];
 			btSolverBody& solverBodyB = m_tmpSolverBodyPool[sbB];
 
-			const btScalar deltaImpulse = m_x[i] - c.m_appliedImpulse;
-			c.m_appliedImpulse = m_x[i];
 			solverBodyA.internalApplyImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaImpulse);
 			solverBodyB.internalApplyImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaImpulse);
 
 			if (infoGlobal.m_splitImpulse)
 			{
-				const btScalar deltaImpulse = m_xSplit[i] - c.m_appliedPushImpulse;
-				solverBodyA.internalApplyPushImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaImpulse);
-				solverBodyB.internalApplyPushImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaImpulse);
+				const btScalar deltaPushImpulse = m_xSplit[i] - c.m_appliedPushImpulse;
+				solverBodyA.internalApplyPushImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaPushImpulse);
+				solverBodyB.internalApplyPushImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaPushImpulse);
 				c.m_appliedPushImpulse = m_xSplit[i];
 			}
 		}
@@ -880,28 +889,44 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 		{
 			btMultiBodySolverConstraint& c = *m_multiBodyAllConstraintPtrArray[i];
 
-			btMultiBody* multiBodyA = c.m_multiBodyA;
-			btMultiBody* multiBodyB = c.m_multiBodyB;
-
-			const int ndofA = multiBodyA->getNumDofs() + 6;
-			const int ndofB = multiBodyB->getNumDofs() + 6;
-
 			const btScalar deltaImpulse = m_multiBodyX[i] - c.m_appliedImpulse;
-			c.m_appliedPushImpulse = m_multiBodyX[i];
+			c.m_appliedImpulse = m_multiBodyX[i];
 
-			applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse, c.m_deltaVelAindex, ndofA);
+			btMultiBody* multiBodyA = c.m_multiBodyA;
+			if (multiBodyA)
+			{
+				const int ndofA = multiBodyA->getNumDofs() + 6;
+				applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse, c.m_deltaVelAindex, ndofA);
 #ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
-			//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
-			//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
-			multiBodyA->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse);
+				//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
+				//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
+				multiBodyA->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse);
 #endif  // DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
+			}
+			else
+			{
+				const int sbA = c.m_solverBodyIdA;
+				btSolverBody& solverBodyA = m_tmpSolverBodyPool[sbA];
+				solverBodyA.internalApplyImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaImpulse);
+			}
 
-			applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse, c.m_deltaVelBindex, ndofB);
+			btMultiBody* multiBodyB = c.m_multiBodyB;
+			if (multiBodyB)
+			{
+				const int ndofB = multiBodyB->getNumDofs() + 6;
+				applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse, c.m_deltaVelBindex, ndofB);
 #ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
-			//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
-			//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
-			multiBodyB->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse);
+				//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
+				//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
+				multiBodyB->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse);
 #endif  // DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
+			}
+			else
+			{
+				const int sbB = c.m_solverBodyIdB;
+				btSolverBody& solverBodyB = m_tmpSolverBodyPool[sbB];
+				solverBodyB.internalApplyImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaImpulse);
+			}
 		}
 	}
 
