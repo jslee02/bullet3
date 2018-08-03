@@ -3,6 +3,9 @@
 #include "btBulletDynamicsCommon.h"
 
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
+#include "BulletDynamics/MLCPSolvers/btLemkeSolver.h"
+#include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
+
 #include "BulletDynamics/Featherstone/btMultiBody.h"
 #include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyMLCPConstraintSolver.h"
@@ -19,8 +22,6 @@
 #include "BulletCollision/CollisionShapes/btShapeHull.h"
 
 #include "../CommonInterfaces/CommonMultiBodyBase.h"
-
-static bool useMCLPSolver = true;  //false;
 
 class SerialChains : public CommonMultiBodyBase
 {
@@ -43,30 +44,20 @@ public:
 
 	btMultiBody* createFeatherstoneMultiBody_testMultiDof(class btMultiBodyDynamicsWorld* world, int numLinks, const btVector3& basePosition, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents, bool spherical = false, bool floating = false);
 	void addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBodyDynamicsWorld* pWorld, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents);
-	void addBoxes_testMultiDof();
 };
 
 static bool g_fixedBase = true;
 static bool g_firstInit = true;
 static float scaling = 0.4f;
 static float friction = 1.;
-#define ARRAY_SIZE_X 5
-#define ARRAY_SIZE_Y 5
-#define ARRAY_SIZE_Z 5
-
-//maximum number of objects (and allow user to shoot additional boxes)
-#define MAX_PROXIES (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024)
-
-#define START_POS_X -5
-//#define START_POS_Y 12
-#define START_POS_Y 2
-#define START_POS_Z -3
+static int g_constraintSolverType = 0;
 
 SerialChains::SerialChains(GUIHelperInterface* helper)
 	: CommonMultiBodyBase(helper)
 {
 	m_guiHelper->setUpAxis(1);
 }
+
 SerialChains::~SerialChains()
 {
 	// Do nothing
@@ -97,32 +88,45 @@ void SerialChains::initPhysics()
 
 	m_broadphase = new btDbvtBroadphase();
 
-	//Use the btMultiBodyConstraintSolver for Featherstone btMultiBody support
-	//
-	if (useMCLPSolver)
+	if (g_constraintSolverType == 4)
 	{
-		btDantzigSolver* mlcp = new btDantzigSolver();
-		//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-		m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+		g_constraintSolverType = 0;
+		g_fixedBase = !g_fixedBase;
 	}
-	else
-	{
-		m_solver = new btMultiBodyConstraintSolver;
-	}
-	useMCLPSolver = !useMCLPSolver;
 
-	//use btMultiBodyDynamicsWorld for Featherstone btMultiBody support
+	btMultiBodyConstraintSolver* sol;
+	btMLCPSolverInterface* mlcp;
+	switch (g_constraintSolverType++)
+	{
+		case 0:
+			m_solver = new btMultiBodyConstraintSolver;
+			b3Printf("Constraint Solver: Sequential Impulse");
+			break;
+		case 1:
+			mlcp = new btSolveProjectedGaussSeidel();
+			m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: MLCP + PGS");
+			break;
+		case 2:
+			mlcp = new btDantzigSolver();
+			m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: MLCP + Dantzig");
+			break;
+		default:
+			mlcp = new btLemkeSolver();
+			m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: MLCP + Lemke");
+			break;
+	}
+
 	btMultiBodyDynamicsWorld* world = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 	m_dynamicsWorld = world;
-	//	m_dynamicsWorld->setDebugDrawer(&gDebugDraw);
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
 	m_dynamicsWorld->setGravity(btVector3(0, -10, 0));
 
 	///create a few basic rigid bodies
 	btVector3 groundHalfExtents(50, 50, 50);
 	btCollisionShape* groundShape = new btBoxShape(groundHalfExtents);
-	//groundShape->initializePolyhedralFeatures();
-	//	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
 
 	m_collisionShapes.push_back(groundShape);
 
@@ -140,16 +144,12 @@ void SerialChains::initPhysics()
 	bool multibodyOnly = true;  //false
 	bool canSleep = true;
 	bool selfCollide = true;
-	bool multibodyConstraint = false;
 	btVector3 linkHalfExtents(0.05, 0.37, 0.1);
 	btVector3 baseHalfExtents(0.05, 0.37, 0.1);
 
 	btMultiBody* mbC1 = createFeatherstoneMultiBody_testMultiDof(world, numLinks, btVector3(-0.4f, 3.f, 0.f), linkHalfExtents, baseHalfExtents, spherical, g_fixedBase);
-	//mbC->forceMultiDof();							//if !spherical, you can comment this line to check the 1DoF algorithm
-
 	btMultiBody* mbC2 = createFeatherstoneMultiBody_testMultiDof(world, numLinks, btVector3(-0.4f, 3.0f, 0.5f), linkHalfExtents, baseHalfExtents, spherical, g_fixedBase);
 
-	//	g_floatingBase = ! g_floatingBase;
 	mbC1->setCanSleep(canSleep);
 	mbC1->setHasSelfCollision(selfCollide);
 	mbC1->setUseGyroTerm(gyro);
@@ -166,7 +166,6 @@ void SerialChains::initPhysics()
 	}
 	//
 	m_dynamicsWorld->setGravity(btVector3(0, -9.81, 0));
-	//m_dynamicsWorld->getSolverInfo().m_numIterations = 100;
 	//////////////////////////////////////////////
 	if (numLinks > 0)
 	{
@@ -201,7 +200,6 @@ void SerialChains::initPhysics()
 	}
 	//
 	m_dynamicsWorld->setGravity(btVector3(0, -9.81, 0));
-	//m_dynamicsWorld->getSolverInfo().m_numIterations = 100;
 	//////////////////////////////////////////////
 	if (numLinks > 0)
 	{
@@ -248,7 +246,6 @@ void SerialChains::initPhysics()
 	{
 		btVector3 halfExtents(.5, .5, .5);
 		btBoxShape* colShape = new btBoxShape(halfExtents);
-		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
 		m_collisionShapes.push_back(colShape);
 
 		/// Create Dynamic Objects
@@ -275,23 +272,6 @@ void SerialChains::initPhysics()
 		btRigidBody* body = new btRigidBody(rbInfo);
 
 		m_dynamicsWorld->addRigidBody(body);  //,1,1+2);
-
-		//        if (multibodyConstraint) {
-		//            btVector3 pointInA = -linkHalfExtents;
-		//      //      btVector3 pointInB = halfExtents;
-		//            btMatrix3x3 frameInA;
-		//            btMatrix3x3 frameInB;
-		//            frameInA.setIdentity();
-		//            frameInB.setIdentity();
-		//            btVector3 jointAxis(1.0,0.0,0.0);
-		//            //btMultiBodySliderConstraint* p2p = new btMultiBodySliderConstraint(mbC,numLinks-1,body,pointInA,pointInB,frameInA,frameInB,jointAxis);
-		//            btMultiBodyFixedConstraint* p2p1 = new btMultiBodyFixedConstraint(mbC1,numLinks-1,mbC1,numLinks-4,pointInA,pointInA,frameInA,frameInB);
-		//            btMultiBodyFixedConstraint* p2p2 = new btMultiBodyFixedConstraint(mbC2,numLinks-1,mbC2,numLinks-4,pointInA,pointInA,frameInA,frameInB);
-		//            p2p1->setMaxAppliedImpulse(2.0);
-		//            p2p2->setMaxAppliedImpulse(2.0);
-		//            m_dynamicsWorld->addMultiBodyConstraint(p2p1);
-		//            m_dynamicsWorld->addMultiBodyConstraint(p2p2);
-		//        }
 	}
 
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
@@ -320,7 +300,6 @@ btMultiBody* SerialChains::createFeatherstoneMultiBody_testMultiDof(btMultiBodyD
 	pMultiBody->setBasePos(basePosition);
 	pMultiBody->setWorldToBaseRot(baseOriQuat);
 	btVector3 vel(0, 0, 0);
-	//	pMultiBody->setBaseVel(vel);
 
 	//init the links
 	btVector3 hingeJointAxis(1, 0, 0);
@@ -370,7 +349,6 @@ void SerialChains::addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBod
 	local_origin[0] = pMultiBody->getBasePos();
 
 	{
-		//	float pos[4]={local_origin[0].x(),local_origin[0].y(),local_origin[0].z(),1};
 		btScalar quat[4] = {-world_to_local[0].x(), -world_to_local[0].y(), -world_to_local[0].z(), world_to_local[0].w()};
 
 		if (1)
@@ -402,7 +380,6 @@ void SerialChains::addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBod
 	for (int i = 0; i < pMultiBody->getNumLinks(); ++i)
 	{
 		btVector3 posr = local_origin[i + 1];
-		//	float pos[4]={posr.x(),posr.y(),posr.z(),1};
 
 		btScalar quat[4] = {-world_to_local[i + 1].x(), -world_to_local[i + 1].y(), -world_to_local[i + 1].z(), world_to_local[i + 1].w()};
 
@@ -419,54 +396,6 @@ void SerialChains::addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBod
 		pWorld->addCollisionObject(col, 2, 1 + 2);
 
 		pMultiBody->getLink(i).m_collider = col;
-	}
-}
-
-void SerialChains::addBoxes_testMultiDof()
-{
-	//create a few dynamic rigidbodies
-	// Re-using the same collision is better for memory usage and performance
-
-	btBoxShape* colShape = new btBoxShape(btVector3(1, 1, 1));
-	//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
-	m_collisionShapes.push_back(colShape);
-
-	/// Create Dynamic Objects
-	btTransform startTransform;
-	startTransform.setIdentity();
-
-	btScalar mass(1.f);
-
-	//rigidbody is dynamic if and only if mass is non zero, otherwise static
-	bool isDynamic = (mass != 0.f);
-
-	btVector3 localInertia(0, 0, 0);
-	if (isDynamic)
-		colShape->calculateLocalInertia(mass, localInertia);
-
-	float start_x = START_POS_X - ARRAY_SIZE_X / 2;
-	float start_y = START_POS_Y;
-	float start_z = START_POS_Z - ARRAY_SIZE_Z / 2;
-
-	for (int k = 0; k < ARRAY_SIZE_Y; k++)
-	{
-		for (int i = 0; i < ARRAY_SIZE_X; i++)
-		{
-			for (int j = 0; j < ARRAY_SIZE_Z; j++)
-			{
-				startTransform.setOrigin(btVector3(
-					btScalar(3.0 * i + start_x),
-					btScalar(3.0 * k + start_y),
-					btScalar(3.0 * j + start_z)));
-
-				//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-				btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
-				btRigidBody* body = new btRigidBody(rbInfo);
-
-				m_dynamicsWorld->addRigidBody(body);  //,1,1+2);
-			}
-		}
 	}
 }
 
