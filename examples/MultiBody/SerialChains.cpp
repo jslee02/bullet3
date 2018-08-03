@@ -1,4 +1,4 @@
-#include "MultiBodyConstraintSolvers.h"
+#include "SerialChains.h"
 #include "../OpenGLWindow/SimpleOpenGL3App.h"
 #include "btBulletDynamicsCommon.h"
 
@@ -22,11 +22,11 @@
 
 static bool useMCLPSolver = true;  //false;
 
-class MultiBodyConstraintSolvers : public CommonMultiBodyBase
+class SerialChains : public CommonMultiBodyBase
 {
 public:
-	MultiBodyConstraintSolvers(GUIHelperInterface* helper);
-	virtual ~MultiBodyConstraintSolvers();
+	SerialChains(GUIHelperInterface* helper);
+	virtual ~SerialChains();
 
 	virtual void initPhysics();
 
@@ -62,24 +62,24 @@ static float friction = 1.;
 #define START_POS_Y 2
 #define START_POS_Z -3
 
-MultiBodyConstraintSolvers::MultiBodyConstraintSolvers(GUIHelperInterface* helper)
+SerialChains::SerialChains(GUIHelperInterface* helper)
 	: CommonMultiBodyBase(helper)
 {
 	m_guiHelper->setUpAxis(1);
 }
-MultiBodyConstraintSolvers::~MultiBodyConstraintSolvers()
+SerialChains::~SerialChains()
 {
 	// Do nothing
 }
 
-void MultiBodyConstraintSolvers::stepSimulation(float deltaTime)
+void SerialChains::stepSimulation(float deltaTime)
 {
 	//use a smaller internal timestep, there are stability issues
 	float internalTimeStep = 1. / 240.f;
 	m_dynamicsWorld->stepSimulation(deltaTime, 10, internalTimeStep);
 }
 
-void MultiBodyConstraintSolvers::initPhysics()
+void SerialChains::initPhysics()
 {
 	m_guiHelper->setUpAxis(1);
 
@@ -299,7 +299,7 @@ void MultiBodyConstraintSolvers::initPhysics()
 	/////////////////////////////////////////////////////////////////
 }
 
-btMultiBody* MultiBodyConstraintSolvers::createFeatherstoneMultiBody_testMultiDof(btMultiBodyDynamicsWorld* pWorld, int numLinks, const btVector3& basePosition, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents, bool spherical, bool fixedBase)
+btMultiBody* SerialChains::createFeatherstoneMultiBody_testMultiDof(btMultiBodyDynamicsWorld* pWorld, int numLinks, const btVector3& basePosition, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents, bool spherical, bool fixedBase)
 {
 	//init the base
 	btVector3 baseInertiaDiag(0.f, 0.f, 0.f);
@@ -359,7 +359,7 @@ btMultiBody* MultiBodyConstraintSolvers::createFeatherstoneMultiBody_testMultiDo
 	return pMultiBody;
 }
 
-void MultiBodyConstraintSolvers::addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBodyDynamicsWorld* pWorld, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents)
+void SerialChains::addColliders_testMultiDof(btMultiBody* pMultiBody, btMultiBodyDynamicsWorld* pWorld, const btVector3& baseHalfExtents, const btVector3& linkHalfExtents)
 {
 	btAlignedObjectArray<btQuaternion> world_to_local;
 	world_to_local.resize(pMultiBody->getNumLinks() + 1);
@@ -422,7 +422,7 @@ void MultiBodyConstraintSolvers::addColliders_testMultiDof(btMultiBody* pMultiBo
 	}
 }
 
-void MultiBodyConstraintSolvers::addBoxes_testMultiDof()
+void SerialChains::addBoxes_testMultiDof()
 {
 	//create a few dynamic rigidbodies
 	// Re-using the same collision is better for memory usage and performance
@@ -470,7 +470,7 @@ void MultiBodyConstraintSolvers::addBoxes_testMultiDof()
 	}
 }
 
-CommonExampleInterface* MultiBodyConstraintSolversCreateFunc(CommonExampleOptions& options)
+CommonExampleInterface* SerialChainsCreateFunc(CommonExampleOptions& options)
 {
-	return new MultiBodyConstraintSolvers(options.m_guiHelper);
+	return new SerialChains(options.m_guiHelper);
 }

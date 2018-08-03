@@ -12,12 +12,6 @@
 #include "CommonGraphicsAppInterface.h"
 #include "CommonWindowInterface.h"
 
-#include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
-#include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
-#include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
-#include "BulletDynamics/Featherstone/btMultiBodyMLCPConstraintSolver.h"
-#include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
-
 struct CommonRigidBodyBase : public CommonExampleInterface
 {
 		//keep the collision shapes, for deletion/cleanup
@@ -70,16 +64,10 @@ struct CommonRigidBodyBase : public CommonExampleInterface
 		m_broadphase = new btDbvtBroadphase();
 
 		///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
-//		btSequentialImpulseConstraintSolver* sol = new btSequentialImpulseConstraintSolver;
-//		m_solver = sol;
-//		btDantzigSolver* mlcp = new btDantzigSolver();
-		btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel();
+		btSequentialImpulseConstraintSolver* sol = new btSequentialImpulseConstraintSolver;
+		m_solver = sol;
 
-		//btSolveProjectedGaussSeidel* mlcp = new btSolveProjectedGaussSeidel;
-//		m_solver = new btMLCPSolver(mlcp);
-		m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
-
-		m_dynamicsWorld = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, reinterpret_cast<btMultiBodyConstraintSolver*>(m_solver), m_collisionConfiguration);
+		m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 
 		m_dynamicsWorld->setGravity(btVector3(0, -10, 0));
 	}
