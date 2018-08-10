@@ -17,6 +17,7 @@ subject to the following restrictions:
 #define BT_BGS_SOLVER_H
 
 #include "BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h"
+#include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
 #include "LinearMath/btMatrixX.h"
 #include "LinearMath/btThreads.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolverInterface.h"
@@ -56,7 +57,10 @@ protected:
 	/// Default MLCP solver
 	btMLCPSolverInterface* m_defaultSolver;
 
-	/// Count of fallbacks of using btSequentialImpulseConstraintSolver, which happens when the MLCP solver fails.
+	/// PGS MLCP solver to be used when \c m_defaultSolver is failed.
+	btSolveProjectedGaussSeidel m_pgsSolver;
+
+	/// Count of fallbacks of using PGS LCP solver (\c m_pgsSolver), which happens when the default MLCP solver (\c m_defaultSolver) fails.
 	int m_fallback;
 
 	// Documentation inherited.
@@ -76,7 +80,7 @@ protected:
 	/// \param[in] index Index to the MLCP block.
 	/// \param[in] numFrictionPerContact Number of friction constraints per contact.
 	/// \param[in] infoGlobal Global configurations for contact solver.
-	void setupContactConstraintMLCPBlockXD(
+	void setupContactConstraintMLCPBlock(
 		int index,
 		int numFrictionPerContact,
 		const btContactSolverInfo& infoGlobal);
@@ -97,7 +101,7 @@ protected:
 	///
 	/// \param[in] index Index to the MLCP block.
 	/// \param[in] infoGlobal Global configurations for contact solver.
-	btScalar solveDiagonalBlock(int index, const btContactSolverInfo& infoGlobal);
+	btScalar solveMLCPBlock(int index, const btContactSolverInfo& infoGlobal);
 
 public:
 	/// Constructor

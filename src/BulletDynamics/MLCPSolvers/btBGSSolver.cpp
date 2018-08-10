@@ -20,39 +20,6 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "btSolveProjectedGaussSeidel.h"
 
-// For debugging
-void print(const std::string& name, const btMatrixXu& mat)
-{
-	//	return;
-	printf("%s: [\n", name.c_str());
-
-	for (int i = 0; i < mat.rows(); ++i)
-	{
-		for (int j = 0; j < mat.cols(); ++j)
-		{
-			printf("%.2f", mat(i, j));
-			if (j != mat.cols() - 1)
-				printf(", ");
-		}
-		printf("\n");
-	}
-	printf("]\n");
-}
-
-void print(const std::string& name, const btVectorXu& vec)
-{
-	//	return;
-	printf("%s: [", name.c_str());
-
-	for (int i = 0; i < vec.size(); ++i)
-	{
-		printf("%.2f", vec[i]);
-		if (i != vec.size() - 1)
-			printf(", ");
-	}
-	printf("]\n");
-}
-
 // Helper function to compute a delta velocity in the constraint space.
 static btScalar computeDeltaVelocityInConstraintSpace(
 	const btVector3& angularDeltaVelocity,
@@ -177,14 +144,14 @@ btScalar btBGSSolver::solveGroupCacheFriendlySetup(btCollisionObject** bodies, i
 
 		for (int i = 0; i < numNormalContactConstraints; ++i)
 		{
-			setupContactConstraintMLCPBlockXD(i, numFrictionPerContact, infoGlobal);
+			setupContactConstraintMLCPBlock(i, numFrictionPerContact, infoGlobal);
 		}
 	}
 
 	return val;
 }
 
-void btBGSSolver::setupContactConstraintMLCPBlockXD(int normalContactIndex, int numFrictionPerContact, const btContactSolverInfo& infoGlobal)
+void btBGSSolver::setupContactConstraintMLCPBlock(int normalContactIndex, int numFrictionPerContact, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(0 <= normalContactIndex);
 	btAssert(normalContactIndex < m_mlcpArray.size());
@@ -381,8 +348,7 @@ btScalar btBGSSolver::solveSingleIteration(int iteration, btCollisionObject** /*
 		const int numContactConstraints = m_tmpSolverContactConstraintPool.size();
 		for (int c = 0; c < numContactConstraints; ++c)
 		{
-			// todo: assumed there are always two friction constraints per contact
-			const btScalar newSquaredResidual = solveDiagonalBlock(c, infoGlobal);
+			const btScalar newSquaredResidual = solveMLCPBlock(c, infoGlobal);
 			squaredResidual = btMax(newSquaredResidual, squaredResidual);
 		}
 	}
@@ -421,7 +387,7 @@ static btScalar clampDeltaImpulse(btScalar deltaImpulse, btSolverConstraint& c, 
 			const btScalar lowerLimit = c.m_lowerLimit * normalAppliedImpulse;
 			const btScalar upperLimit = c.m_upperLimit * normalAppliedImpulse;
 
-			// Note: This clamping is necessary for the cases of (1) round off error or (2) failure of the LCP solver.
+			// This clamping is necessary for the two cases: (1) round off error or (2) failure of the LCP solver.
 			if (sum < lowerLimit)
 			{
 				deltaImpulse = lowerLimit - c.m_appliedImpulse;
@@ -473,7 +439,7 @@ static btScalar clampDeltaPushImpulse(btScalar deltaPushImpulse, const btSolverC
 			const btScalar lowerLimit = c.m_lowerLimit * normalAppliedImpulse;
 			const btScalar upperLimit = c.m_upperLimit * normalAppliedImpulse;
 
-			// Note: This clamping is necessary for the cases of (1) round off error or (2) failure of the LCP solver.
+			// This clamping is necessary for the two cases: (1) round off error or (2) failure of the LCP solver.
 			if (sum < lowerLimit)
 			{
 				deltaPushImpulse = lowerLimit - c.m_appliedPushImpulse;
@@ -494,7 +460,7 @@ static btScalar clampDeltaPushImpulse(btScalar deltaPushImpulse, const btSolverC
 	return deltaPushImpulse;
 }
 
-btScalar btBGSSolver::solveDiagonalBlock(int index, const btContactSolverInfo& infoGlobal)
+btScalar btBGSSolver::solveMLCPBlock(int index, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(index >= 0);
 	btAssert(index < m_mlcpArray.size());
@@ -510,17 +476,14 @@ btScalar btBGSSolver::solveDiagonalBlock(int index, const btContactSolverInfo& i
 	btVectorXu& hi = mlcp.m_hi;
 	btAlignedObjectArray<int>& limitDependencies = mlcp.m_limitDependencies;
 
-	bool result = true;
-
 	if (A.rows() == 0)
 		return true;
 
 	const int numConstraints = allConstraintPtrArray.size();
 
+	// Update b, ho, and hi in Gauss-Seidel style
 	for (int i = 0; i < numConstraints; ++i)
 	{
-		// Update b and bSplit in Gauss-Seidel style
-
 		const btSolverConstraint& c = *(allConstraintPtrArray[i]);
 		const btScalar jacDiag = c.m_jacDiagABInv;
 		if (!btFuzzyZero(jacDiag))
@@ -549,8 +512,6 @@ btScalar btBGSSolver::solveDiagonalBlock(int index, const btContactSolverInfo& i
 		}
 #endif
 
-		// Update lo and hi in Gauss-Seidel style
-
 		const int fIndex = limitDependencies[i];
 		// Normal contact constraint
 		if (fIndex == -1)
@@ -578,46 +539,29 @@ btScalar btBGSSolver::solveDiagonalBlock(int index, const btContactSolverInfo& i
 		// TODO(JS): Needs to update for torsional friction once introduced
 	}
 
-	// TODO(JS): Support splint impulse
-	// TODO(JS): Assumed that A, b, lo, hi are already computed
-	btAssert(m_defaultSolver);
-	//	btAssert(solver);
-
-	if (infoGlobal.m_splitImpulse)
-	{
-		btMatrixXu Acopy = A;
-		btAlignedObjectArray<int> limitDependenciesCopy = limitDependencies;
-		result = m_defaultSolver->solveMLCP(A, b, x, lo, hi, limitDependencies, infoGlobal.m_numIterations);
-
-		if (!result)
-			printf("failed to solve velocity!\n\n");
-
-		if (result)
-		{
-			result = m_defaultSolver->solveMLCP(Acopy, bSplit, xSplit, lo, hi, limitDependenciesCopy, infoGlobal.m_numIterations);
-			if (!result)
-				printf("failed to solve pushing!\n\n");
-		}
-	}
-	else
-	{
-		result = m_defaultSolver->solveMLCP(A, b, x, lo, hi, limitDependencies, infoGlobal.m_numIterations);
-	}
+	bool result = m_defaultSolver->solveMLCP(A, b, x, lo, hi, limitDependencies, infoGlobal.m_numIterations);
 
 	if (!result)
 	{
-		// TODO(JS): Fallback to SI
-		print("A", A);
-		print("b", b);
-		print("lo", lo);
-		print("hi", hi);
+		result = m_pgsSolver.solveMLCP(A, b, x, lo, hi, limitDependencies, infoGlobal.m_numIterations);
+		// PGS solver never return false but iterate up to the maximum iteration number
+		btAssert(result);
+		m_fallback++;
+	}
 
-		print("A", A);
-		print("bSplit", bSplit);
-		print("lo", lo);
-		print("hi", hi);
+	if (infoGlobal.m_splitImpulse)
+	{
+		const btMatrixXu Acopy = A;
+		const btAlignedObjectArray<int> limitDependenciesCopy = limitDependencies;
+		result = m_defaultSolver->solveMLCP(Acopy, bSplit, xSplit, lo, hi, limitDependenciesCopy, infoGlobal.m_numIterations);
 
-		printf("Error: Falling back to SI isn't implemented yet.\n");
+		if (!result)
+		{
+			result = m_pgsSolver.solveMLCP(Acopy, bSplit, xSplit, lo, hi, limitDependenciesCopy, infoGlobal.m_numIterations);
+			// PGS solver never return false but iterate up to the maximum iteration number
+			btAssert(result);
+			m_fallback++;
+		}
 	}
 
 	btScalar squaredResidual = btScalar(0);
@@ -646,7 +590,6 @@ btScalar btBGSSolver::solveDiagonalBlock(int index, const btContactSolverInfo& i
 			}
 
 			const btScalar residual = deltaImpulse * (btScalar(1) / c.m_jacDiagABInv);
-			// TODO(JS): Do we need to care the split impulse residual as well?
 
 			squaredResidual = btMax(squaredResidual, residual * residual);
 		}
@@ -659,7 +602,7 @@ btBGSSolver::btBGSSolver(btMLCPSolverInterface* solver)
 	: m_defaultSolver(solver),
 	  m_fallback(0)
 {
-	// Do nothing
+	btAssert(solver);
 }
 
 btBGSSolver::~btBGSSolver()
@@ -669,6 +612,7 @@ btBGSSolver::~btBGSSolver()
 
 void btBGSSolver::setMLCPSolver(btMLCPSolverInterface* solver)
 {
+	btAssert(solver);
 	m_defaultSolver = solver;
 }
 
