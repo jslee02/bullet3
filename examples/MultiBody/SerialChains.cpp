@@ -7,6 +7,7 @@
 
 #include "BulletDynamics/Featherstone/btMultiBody.h"
 #include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyBGSConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyMLCPConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
 #include "BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
@@ -88,7 +89,7 @@ void SerialChains::initPhysics()
 
 	m_broadphase = new btDbvtBroadphase();
 
-	if (g_constraintSolverType == 3)
+	if (g_constraintSolverType == 4)
 	{
 		g_constraintSolverType = 0;
 		g_fixedBase = !g_fixedBase;
@@ -97,19 +98,39 @@ void SerialChains::initPhysics()
 	btMLCPSolverInterface* mlcp;
 	switch (g_constraintSolverType++)
 	{
+//		case 0:
+//			m_solver = new btMultiBodyConstraintSolver;
+//			b3Printf("Constraint Solver: Sequential Impulse");
+//			break;
+//		case 1:
+//			mlcp = new btSolveProjectedGaussSeidel();
+//			m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+//			b3Printf("Constraint Solver: MLCP + PGS");
+//			break;
+//		case 2:
+//			mlcp = new btDantzigSolver();
+//			m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+//			b3Printf("Constraint Solver: MLCP + Dantzig");
+//			break;
 		case 0:
-			m_solver = new btMultiBodyConstraintSolver;
-			b3Printf("Constraint Solver: Sequential Impulse");
+			mlcp = new btSolveProjectedGaussSeidel();
+			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: BSG + PGS");
 			break;
 		case 1:
+			mlcp = new btDantzigSolver();
+			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: BSG + Dantzig");
+			break;
+		case 2:
 			mlcp = new btSolveProjectedGaussSeidel();
-			m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
-			b3Printf("Constraint Solver: MLCP + PGS");
+			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: BSG + Lemke");
 			break;
 		default:
 			mlcp = new btDantzigSolver();
-			m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
-			b3Printf("Constraint Solver: MLCP + Dantzig");
+			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: BSG + Dantzig");
 			break;
 	}
 
