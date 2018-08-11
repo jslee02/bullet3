@@ -28,6 +28,10 @@ subject to the following restrictions:
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btLemkeSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
+#include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyBGSConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyMLCPConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
 #include "Bullet3Common/b3Logging.h"
 
 #include "../CommonInterfaces/CommonRigidBodyBase.h"
@@ -65,34 +69,38 @@ void BasicExample::initPhysics()
 	}
 
 	btMLCPSolverInterface* mlcp;
-	btSequentialImpulseConstraintSolver* sol;
+	btMultiBodyConstraintSolver* sol;
 	switch (g_constraintSolverType++)
 	{
 		case 0:
-			sol = new btSequentialImpulseConstraintSolver;
+			sol = new btMultiBodyConstraintSolver;
 			// TODO: Uncommenting b3Printf causesundefined reference to `b3OutputPrintfVarArgsInternal`
 			// b3Printf("Constraint Solver: Sequential Impulse");
 			break;
 		case 1:
 			mlcp = new btSolveProjectedGaussSeidel();
-			sol = new btBGSSolver(mlcp);
+			sol = new btMultiBodyBGSConstraintSolver(mlcp);
 			// TODO: Uncommenting b3Printf causesundefined reference to `b3OutputPrintfVarArgsInternal`
 			// b3Printf("Constraint Solver: BGS + PGS");
 			break;
 		case 2:
 			mlcp = new btDantzigSolver();
-			sol = new btBGSSolver(mlcp);
+			sol = new btMultiBodyBGSConstraintSolver(mlcp);
 			// TODO: Uncommenting b3Printf causesundefined reference to `b3OutputPrintfVarArgsInternal`
 			// b3Printf("Constraint Solver: BGS + Dantzig");
 			break;
 		default:
 			mlcp = new btLemkeSolver();
-			sol = new btBGSSolver(mlcp);
+			sol = new btMultiBodyBGSConstraintSolver(mlcp);
 			// TODO: Uncommenting b3Printf causesundefined reference to `b3OutputPrintfVarArgsInternal`
 			// b3Printf("Constraint Solver: BGS + Lemke");
 			break;
 	}
-	m_dynamicsWorld->setConstraintSolver(sol);
+	mlcp = new btDantzigSolver();
+//	sol = new btMultiBodyConstraintSolver(mlcp);
+	sol = new btMultiBodyConstraintSolver();
+	m_dynamicsWorld = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, sol, m_collisionConfiguration);
+//	m_dynamicsWorld->setConstraintSolver(sol);
 
 	//m_dynamicsWorld->setGravity(btVector3(0,0,0));
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);

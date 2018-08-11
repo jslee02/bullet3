@@ -26,9 +26,9 @@ struct btMultiBodyMLCP
 {
 	btMatrixXu m_A;
 	btVectorXu m_b;
-	btVectorXu m_bSplit;
+	//	btVectorXu m_bSplit;
 	btVectorXu m_x;
-	btVectorXu m_xSplit;
+	//	btVectorXu m_xSplit;
 	btVectorXu m_lo;
 	btVectorXu m_hi;
 	btAlignedObjectArray<int> m_limitDependencies;

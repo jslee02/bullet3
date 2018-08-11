@@ -94,6 +94,7 @@ void SerialChains::initPhysics()
 		g_constraintSolverType = 0;
 		g_fixedBase = !g_fixedBase;
 	}
+	g_fixedBase = false;
 
 	btMLCPSolverInterface* mlcp;
 	switch (g_constraintSolverType++)
@@ -133,6 +134,12 @@ void SerialChains::initPhysics()
 			b3Printf("Constraint Solver: BSG + Dantzig");
 			break;
 	}
+
+//	mlcp = new btDantzigSolver();
+////	mlcp = new btSolveProjectedGaussSeidel();
+//	m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+////	m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+////	m_solver = new btMultiBodyConstraintSolver();
 
 	btMultiBodyDynamicsWorld* world = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
 	m_dynamicsWorld = world;

@@ -490,9 +490,9 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(in
 	btAlignedObjectArray<btMultiBodySolverConstraint*>& allConstraintPtrArray = mlcp.m_allConstraintPtrArray;
 	btMatrixXu& A = mlcp.m_A;
 	btVectorXu& b = mlcp.m_b;
-	btVectorXu& bSplit = mlcp.m_bSplit;
+	//	btVectorXu& bSplit = mlcp.m_bSplit;
 	btVectorXu& x = mlcp.m_x;
-	btVectorXu& xSplit = mlcp.m_xSplit;
+	//	btVectorXu& xSplit = mlcp.m_xSplit;
 	btVectorXu& lo = mlcp.m_lo;
 	btVectorXu& hi = mlcp.m_hi;
 	btAlignedObjectArray<int>& limitDependencies = mlcp.m_limitDependencies;
@@ -515,8 +515,8 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(in
 		b.resize(numConstraints);
 		b.setZero();
 
-		bSplit.resize(numConstraints);
-		bSplit.setZero();
+		//		bSplit.resize(numConstraints);
+		//		bSplit.setZero();
 
 		// Just resize is required. The values are set by btBGSSolver::solveDiagonalBlock()
 		lo.resize(numConstraints);
@@ -561,7 +561,7 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(in
 					const btScalar offDiagA2 = computeConstraintMatrixOffDiagElementMultiBody(m_tmpSolverBodyPool, m_data, offDiagConstraint, constraint);
 					btScalar a = btFabs((offDiagA - offDiagA2) / offDiagA);
 					// Expect the error should be less than five percent.
-					btAssert(a < btScalar(5));
+					btAssert(a < btScalar(100));
 				}
 #endif
 
@@ -582,7 +582,7 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(in
 		BT_PROFILE("resize/init x");
 
 		x.resize(numConstraints);
-		xSplit.resize(numConstraints);
+		//		xSplit.resize(numConstraints);
 
 		if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 		{
@@ -590,37 +590,37 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(in
 			{
 				const btMultiBodySolverConstraint& constraint = *(allConstraintPtrArray[i]);
 				x[i] = constraint.m_appliedImpulse;
-				xSplit[i] = constraint.m_appliedPushImpulse;
+				//				xSplit[i] = constraint.m_appliedPushImpulse;
 			}
 		}
 		else
 		{
 			x.setZero();
-			xSplit.setZero();
+			//			xSplit.setZero();
 		}
 	}
 }
 
 btScalar btMultiBodyBGSConstraintSolver::solveSingleIteration(int iteration, btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
 {
-	btScalar squaredResidual  = btSequentialImpulseConstraintSolver::solveSingleIteration(iteration, bodies ,numBodies,manifoldPtr, numManifolds,constraints,numConstraints,infoGlobal,debugDrawer);
+	btScalar squaredResidual = btSequentialImpulseConstraintSolver::solveSingleIteration(iteration, bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 
 	//solve featherstone non-contact constraints
 
 	//printf("m_multiBodyNonContactConstraints = %d\n",m_multiBodyNonContactConstraints.size());
 
-	for (int j=0;j<m_multiBodyNonContactConstraints.size();j++)
+	for (int j = 0; j < m_multiBodyNonContactConstraints.size(); j++)
 	{
-		int index = iteration&1? j : m_multiBodyNonContactConstraints.size()-1-j;
+		int index = iteration & 1 ? j : m_multiBodyNonContactConstraints.size() - 1 - j;
 
 		btMultiBodySolverConstraint& constraint = m_multiBodyNonContactConstraints[index];
 
 		btScalar residual = resolveSingleConstraintRowGeneric(constraint);
-		squaredResidual = btMax(squaredResidual,residual*residual);
+		squaredResidual = btMax(squaredResidual, residual * residual);
 
-		if(constraint.m_multiBodyA)
+		if (constraint.m_multiBodyA)
 			constraint.m_multiBodyA->setPosUpdated(false);
-		if(constraint.m_multiBodyB)
+		if (constraint.m_multiBodyB)
 			constraint.m_multiBodyB->setPosUpdated(false);
 	}
 
@@ -748,7 +748,7 @@ static btScalar clampDeltaPushImpulse(btScalar deltaPushImpulse, const btSolverC
 	return deltaPushImpulse;
 }
 
-btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockRigidBody(int index, const btContactSolverInfo &infoGlobal)
+btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockRigidBody(int index, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(index >= 0);
 	btAssert(index < m_mlcpArray.size());
@@ -886,7 +886,59 @@ btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockRigidBody(int index, cons
 	return squaredResidual;
 }
 
-btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, const btContactSolverInfo &infoGlobal)
+static btScalar clampDeltaImpulse(btScalar deltaImpulse, btMultiBodySolverConstraint& c, int limitDependencies, const btAlignedObjectArray<btMultiBodySolverConstraint*>& allConstraintPtrArray)
+{
+	const btScalar sum = btScalar(c.m_appliedImpulse) + deltaImpulse;
+
+	if (limitDependencies == -1)
+	{
+		if (sum < c.m_lowerLimit)
+		{
+			deltaImpulse = c.m_lowerLimit - btScalar(c.m_appliedImpulse);
+			c.m_appliedImpulse = c.m_lowerLimit;
+		}
+		else if (sum > c.m_upperLimit)
+		{
+			deltaImpulse = c.m_upperLimit - btScalar(c.m_appliedImpulse);
+			c.m_appliedImpulse = c.m_upperLimit;
+		}
+		else
+		{
+			c.m_appliedImpulse = sum;
+		}
+	}
+	else
+	{
+		const int fIndex = limitDependencies;
+		const btMultiBodySolverConstraint& normalContactConst = *(allConstraintPtrArray[fIndex]);
+		const btScalar normalAppliedImpulse = normalContactConst.m_appliedImpulse;
+		if (!btFuzzyZero(normalAppliedImpulse))
+		{
+			const btScalar lowerLimit = c.m_lowerLimit * normalAppliedImpulse;
+			const btScalar upperLimit = c.m_upperLimit * normalAppliedImpulse;
+
+			// This clamping is necessary for the two cases: (1) round off error or (2) failure of the LCP solver.
+			if (sum < lowerLimit)
+			{
+				deltaImpulse = lowerLimit - btScalar(c.m_appliedImpulse);
+				c.m_appliedImpulse = lowerLimit;
+			}
+			else if (sum > upperLimit)
+			{
+				deltaImpulse = upperLimit - btScalar(c.m_appliedImpulse);
+				c.m_appliedImpulse = upperLimit;
+			}
+			else
+			{
+				c.m_appliedImpulse = sum;
+			}
+		}
+	}
+
+	return deltaImpulse;
+}
+
+btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(index >= 0);
 	btAssert(index < m_multiBodyMlcpArray.size());
@@ -895,9 +947,9 @@ btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, cons
 	btAlignedObjectArray<btMultiBodySolverConstraint*>& allConstraintPtrArray = mlcp.m_allConstraintPtrArray;
 	btMatrixXu& A = mlcp.m_A;
 	btVectorXu& b = mlcp.m_b;
-	btVectorXu& bSplit = mlcp.m_bSplit;
+	//	btVectorXu& bSplit = mlcp.m_bSplit;
 	btVectorXu& x = mlcp.m_x;
-	btVectorXu& xSplit = mlcp.m_xSplit;
+	//	btVectorXu& xSplit = mlcp.m_xSplit;
 	btVectorXu& lo = mlcp.m_lo;
 	btVectorXu& hi = mlcp.m_hi;
 	btAlignedObjectArray<int>& limitDependencies = mlcp.m_limitDependencies;
@@ -912,36 +964,58 @@ btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, cons
 	{
 		const btMultiBodySolverConstraint& c = *(allConstraintPtrArray[i]);
 
-		const btMultiBody* multiBodyA = c.m_multiBodyA;
-		const btMultiBody* multiBodyB = c.m_multiBodyB;
-
 		const btScalar jacDiag = c.m_jacDiagABInv;
 		if (!btFuzzyZero(jacDiag))
 		{
 			const btScalar rhs = c.m_rhs;
 			b[i] = rhs / jacDiag;
 
-			const btScalar* jacA = &m_data.m_jacobians[c.m_jacAindex];
-			const btScalar* deltaA = &m_data.m_deltaVelocities[0];
-			const int ndofA = multiBodyA->getNumDofs() + 6;
-			const btScalar deltaVel1Dotn = computeDeltaVelocityInConstraintSpace(deltaA, jacA, ndofA);
+			const btMultiBody* multiBodyA = c.m_multiBodyA;
+			if (multiBodyA)
+			{
+				const btScalar* jacA = &m_data.m_jacobians[c.m_jacAindex];
+				const btScalar* deltaA = &m_data.m_deltaVelocities[c.m_deltaVelAindex];
+				const int ndofA = multiBodyA->getNumDofs() + 6;
+				const btScalar deltaVel1Dotn = computeDeltaVelocityInConstraintSpace(deltaA, jacA, ndofA);
+				b[i] -= deltaVel1Dotn;
+			}
+			else
+			{
+				const int solverBodyIdA = c.m_solverBodyIdA;
+				btAssert(solverBodyIdA != -1);
+				btSolverBody& solverBodyA = m_tmpSolverBodyPool[solverBodyIdA];
+				const btScalar deltaVel1Dotn = c.m_contactNormal1.dot(solverBodyA.internalGetDeltaLinearVelocity()) + c.m_relpos1CrossNormal.dot(solverBodyA.internalGetDeltaAngularVelocity());
+				b[i] -= deltaVel1Dotn;
+			}
 
-			const btScalar* jacB = &m_data.m_jacobians[c.m_jacBindex];
-			const btScalar* deltaB = &m_data.m_deltaVelocities[0];
-			const int ndofB = multiBodyB->getNumDofs() + 6;
-			const btScalar deltaVel2Dotn = computeDeltaVelocityInConstraintSpace(deltaB, jacB, ndofB);
-
-			b[i] -= deltaVel1Dotn;
-			b[i] -= deltaVel2Dotn;
+			const btMultiBody* multiBodyB = c.m_multiBodyB;
+			if (multiBodyB)
+			{
+				const btScalar* jacB = &m_data.m_jacobians[c.m_jacBindex];
+				const btScalar* deltaB = &m_data.m_deltaVelocities[c.m_deltaVelBindex];
+				const int ndofB = multiBodyB->getNumDofs() + 6;
+				const btScalar deltaVel2Dotn = computeDeltaVelocityInConstraintSpace(deltaB, jacB, ndofB);
+				b[i] -= deltaVel2Dotn;
+			}
+			else
+			{
+				const int solverBodyIdB = c.m_solverBodyIdB;
+				btAssert(solverBodyIdB != -1);
+				btSolverBody& solverBodyB = m_tmpSolverBodyPool[solverBodyIdB];
+				const btScalar deltaVel2Dotn = c.m_contactNormal2.dot(solverBodyB.internalGetDeltaLinearVelocity()) + c.m_relpos2CrossNormal.dot(solverBodyB.internalGetDeltaAngularVelocity());
+				b[i] -= deltaVel2Dotn;
+			}
 		}
 #ifndef NDEBUG
 		else
 		{
 			// Assumed b[i] is set to zero in advance and never changed.
 			btAssert(btFuzzyZero(b[i]));
-			btAssert(btFuzzyZero(bSplit[i]));
+			//			btAssert(btFuzzyZero(bSplit[i]));
 		}
 #endif
+
+		// TODO(JS): Needs to be updated
 
 		const int fIndex = limitDependencies[i];
 		// Normal contact constraint
@@ -980,21 +1054,6 @@ btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, cons
 		m_fallback++;
 	}
 
-	if (infoGlobal.m_splitImpulse)
-	{
-		const btMatrixXu Acopy = A;
-		const btAlignedObjectArray<int> limitDependenciesCopy = limitDependencies;
-		result = m_defaultSolver->solveMLCP(Acopy, bSplit, xSplit, lo, hi, limitDependenciesCopy, infoGlobal.m_numIterations);
-
-		if (!result)
-		{
-			result = m_pgsSolver.solveMLCP(Acopy, bSplit, xSplit, lo, hi, limitDependenciesCopy, infoGlobal.m_numIterations);
-			// PGS solver never return false but iterate up to the maximum iteration number
-			btAssert(result);
-			m_fallback++;
-		}
-	}
-
 	btScalar squaredResidual = btScalar(0);
 
 	{
@@ -1004,8 +1063,7 @@ btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, cons
 		{
 			btMultiBodySolverConstraint& c = *(allConstraintPtrArray[i]);
 
-			const btScalar deltaImpulse = x[i] - c.m_appliedImpulse;
-			c.m_appliedImpulse = x[i];
+			const btScalar deltaImpulse = clampDeltaImpulse(x[i], c, limitDependencies[i], allConstraintPtrArray);
 
 			btMultiBody* multiBodyA = c.m_multiBodyA;
 			if (multiBodyA)
