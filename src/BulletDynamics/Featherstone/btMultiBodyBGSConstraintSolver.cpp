@@ -206,7 +206,8 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 	const btAlignedObjectArray<btSolverBody>& solverBodyPool,
 	const btMultiBodyJacobianData& data,
 	const btMultiBodySolverConstraint& constraint,
-	const btMultiBodySolverConstraint& offDiagConstraint)
+	const btMultiBodySolverConstraint& offDiagConstraint,
+	bool repeat = true)
 {
 	btScalar offDiagA = btScalar(0);
 
@@ -315,6 +316,21 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 				offDiagConstraint.m_contactNormal2,
 				invMassB, constraint.m_angularComponentB,
 				constraint.m_contactNormal2);
+		}
+	}
+
+	if (repeat)
+	{
+		if (!btFuzzyZero(offDiagA))
+		{
+			const btScalar offDiagA2 = computeConstraintMatrixOffDiagElementMultiBody(solverBodyPool, data, offDiagConstraint, constraint, false);
+
+			btScalar a = btFabs((offDiagA - offDiagA2) / offDiagA);
+			// Expect the error should be less than five percent.
+			if (a > btScalar(2))
+			{
+				int b = 10;
+			}
 		}
 	}
 
