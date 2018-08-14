@@ -13,7 +13,7 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "BulletDynamics/Featherstone/btMultiBodyBGSConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyBlockGSConstraintSolver.h"
 
 #include "BulletCollision/NarrowPhaseCollision/btPersistentManifold.h"
 #include "BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
@@ -337,7 +337,7 @@ static btScalar computeConstraintMatrixOffDiagElementMultiBody(
 	return offDiagA;
 }
 
-btScalar btMultiBodyBGSConstraintSolver::solveGroupCacheFriendlySetup(
+btScalar btMultiBodyBlockGSConstraintSolver::solveGroupCacheFriendlySetup(
 	btCollisionObject** bodies,
 	int numBodies,
 	btPersistentManifold** manifoldPtr,
@@ -375,7 +375,7 @@ btScalar btMultiBodyBGSConstraintSolver::solveGroupCacheFriendlySetup(
 	return val;
 }
 
-void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockRigidBody(int normalContactIndex, int numFrictionPerContact, const btContactSolverInfo& infoGlobal)
+void btMultiBodyBlockGSConstraintSolver::setupContactConstraintMLCPBlockRigidBody(int normalContactIndex, int numFrictionPerContact, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(0 <= normalContactIndex);
 	btAssert(normalContactIndex < m_mlcpArray.size());
@@ -413,7 +413,7 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockRigidBody(in
 		bSplit.resize(numConstraints);
 		bSplit.setZero();
 
-		// Just resize is required. The values are set by btBGSSolver::solveDiagonalBlock()
+		// Just resize is required. The values are set by btBlockGSSolver::solveDiagonalBlock()
 		lo.resize(numConstraints);
 		hi.resize(numConstraints);
 
@@ -496,7 +496,7 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockRigidBody(in
 	}
 }
 
-void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(int normalContactIndex, int numFrictionPerContact, const btContactSolverInfo& infoGlobal)
+void btMultiBodyBlockGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(int normalContactIndex, int numFrictionPerContact, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(0 <= normalContactIndex);
 	btAssert(normalContactIndex < m_multiBodyMlcpArray.size());
@@ -534,7 +534,7 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(in
 		//		bSplit.resize(numConstraints);
 		//		bSplit.setZero();
 
-		// Just resize is required. The values are set by btBGSSolver::solveDiagonalBlock()
+		// Just resize is required. The values are set by btBlockGSSolver::solveDiagonalBlock()
 		lo.resize(numConstraints);
 		hi.resize(numConstraints);
 
@@ -617,7 +617,7 @@ void btMultiBodyBGSConstraintSolver::setupContactConstraintMLCPBlockMultiBody(in
 	}
 }
 
-btScalar btMultiBodyBGSConstraintSolver::solveSingleIteration(int iteration, btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+btScalar btMultiBodyBlockGSConstraintSolver::solveSingleIteration(int iteration, btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
 {
 	btScalar squaredResidual = btSequentialImpulseConstraintSolver::solveSingleIteration(iteration, bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 
@@ -764,7 +764,7 @@ static btScalar clampDeltaPushImpulse(btScalar deltaPushImpulse, const btSolverC
 	return deltaPushImpulse;
 }
 
-btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockRigidBody(int index, const btContactSolverInfo& infoGlobal)
+btScalar btMultiBodyBlockGSConstraintSolver::solveMLCPBlockRigidBody(int index, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(index >= 0);
 	btAssert(index < m_mlcpArray.size());
@@ -954,7 +954,7 @@ static btScalar clampDeltaImpulse(btScalar deltaImpulse, btMultiBodySolverConstr
 	return deltaImpulse;
 }
 
-btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, const btContactSolverInfo& infoGlobal)
+btScalar btMultiBodyBlockGSConstraintSolver::solveMLCPBlockMultiBody(int index, const btContactSolverInfo& infoGlobal)
 {
 	btAssert(index >= 0);
 	btAssert(index < m_multiBodyMlcpArray.size());
@@ -1126,33 +1126,33 @@ btScalar btMultiBodyBGSConstraintSolver::solveMLCPBlockMultiBody(int index, cons
 	return squaredResidual;
 }
 
-btMultiBodyBGSConstraintSolver::btMultiBodyBGSConstraintSolver(btMLCPSolverInterface* solver)
+btMultiBodyBlockGSConstraintSolver::btMultiBodyBlockGSConstraintSolver(btMLCPSolverInterface* solver)
 	: m_defaultSolver(solver), m_fallback(0)
 {
 	// Do nothing
 }
 
-btMultiBodyBGSConstraintSolver::~btMultiBodyBGSConstraintSolver()
+btMultiBodyBlockGSConstraintSolver::~btMultiBodyBlockGSConstraintSolver()
 {
 	// Do nothing
 }
 
-void btMultiBodyBGSConstraintSolver::setMLCPSolver(btMLCPSolverInterface* solver)
+void btMultiBodyBlockGSConstraintSolver::setMLCPSolver(btMLCPSolverInterface* solver)
 {
 	m_defaultSolver = solver;
 }
 
-int btMultiBodyBGSConstraintSolver::getNumFallbacks() const
+int btMultiBodyBlockGSConstraintSolver::getNumFallbacks() const
 {
 	return m_fallback;
 }
 
-void btMultiBodyBGSConstraintSolver::setNumFallbacks(int num)
+void btMultiBodyBlockGSConstraintSolver::setNumFallbacks(int num)
 {
 	m_fallback = num;
 }
 
-btConstraintSolverType btMultiBodyBGSConstraintSolver::getSolverType() const
+btConstraintSolverType btMultiBodyBlockGSConstraintSolver::getSolverType() const
 {
-	return BT_BGS_SOLVER;
+	return BT_BLOCK_GS_SOLVER;
 }

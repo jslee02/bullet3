@@ -77,19 +77,19 @@ void Boxes::initPhysics()
 			mlcp = new btSolveProjectedGaussSeidel();
 			sol = new btBlockGSSolver(mlcp);
 			// TODO: Uncommenting b3Printf causesundefined reference to `b3OutputPrintfVarArgsInternal`
-			// b3Printf("Constraint Solver: BGS + PGS");
+			// b3Printf("Constraint Solver: Block GS + PGS");
 			break;
 		case 2:
 			mlcp = new btDantzigSolver();
 			sol = new btBlockGSSolver(mlcp);
 			// TODO: Uncommenting b3Printf causesundefined reference to `b3OutputPrintfVarArgsInternal`
-			// b3Printf("Constraint Solver: BGS + Dantzig");
+			// b3Printf("Constraint Solver: Block GS + Dantzig");
 			break;
 		default:
 			mlcp = new btLemkeSolver();
 			sol = new btBlockGSSolver(mlcp);
 			// TODO: Uncommenting b3Printf causesundefined reference to `b3OutputPrintfVarArgsInternal`
-			// b3Printf("Constraint Solver: BGS + Lemke");
+			// b3Printf("Constraint Solver: Block GS + Lemke");
 			break;
 	}
 	m_dynamicsWorld->setConstraintSolver(sol);

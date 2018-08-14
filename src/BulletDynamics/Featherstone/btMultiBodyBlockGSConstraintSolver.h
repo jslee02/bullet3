@@ -13,8 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef BT_MULTIBODY_BGS_CONSTRAINT_SOLVER_H
-#define BT_MULTIBODY_BGS_CONSTRAINT_SOLVER_H
+#ifndef BT_MULTIBODY_BLOCK_GS_CONSTRAINT_SOLVER_H
+#define BT_MULTIBODY_BLOCK_GS_CONSTRAINT_SOLVER_H
 
 #include "LinearMath/btMatrixX.h"
 #include "LinearMath/btThreads.h"
@@ -26,7 +26,7 @@ subject to the following restrictions:
 class btMLCPSolverInterface;
 class btMultiBody;
 
-class btMultiBodyBGSConstraintSolver : public btMultiBodyConstraintSolver
+class btMultiBodyBlockGSConstraintSolver : public btMultiBodyConstraintSolver
 {
 protected:
 	/// Array of MLCP blocks for rigid bodies.
@@ -101,10 +101,10 @@ public:
 	/// Constructor
 	///
 	/// \param[in] solver MLCP solver. Assumed it's not null.
-	explicit btMultiBodyBGSConstraintSolver(btMLCPSolverInterface* solver);
+	explicit btMultiBodyBlockGSConstraintSolver(btMLCPSolverInterface* solver);
 
 	/// Destructor
-	virtual ~btMultiBodyBGSConstraintSolver();
+	virtual ~btMultiBodyBlockGSConstraintSolver();
 
 	/// Sets MLCP solver. Assumed it's not null.
 	void setMLCPSolver(btMLCPSolverInterface* solver);
@@ -120,4 +120,4 @@ public:
 	virtual btConstraintSolverType getSolverType() const;
 };
 
-#endif  // BT_MULTIBODY_BGS_CONSTRAINT_SOLVER_H
+#endif  // BT_MULTIBODY_BLOCK_GS_CONSTRAINT_SOLVER_H

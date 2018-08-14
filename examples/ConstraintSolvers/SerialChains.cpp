@@ -7,7 +7,7 @@
 
 #include "BulletDynamics/Featherstone/btMultiBody.h"
 #include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
-#include "BulletDynamics/Featherstone/btMultiBodyBGSConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyBlockGSConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyMLCPConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
 #include "BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
@@ -115,29 +115,29 @@ void SerialChains::initPhysics()
 //			break;
 		case 0:
 			mlcp = new btSolveProjectedGaussSeidel();
-			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			m_solver = new btMultiBodyBlockGSConstraintSolver(mlcp);
 			b3Printf("Constraint Solver: BSG + PGS");
 			break;
 		case 1:
 			mlcp = new btDantzigSolver();
-			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			m_solver = new btMultiBodyBlockGSConstraintSolver(mlcp);
 			b3Printf("Constraint Solver: BSG + Dantzig");
 			break;
 		case 2:
 			mlcp = new btSolveProjectedGaussSeidel();
-			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			m_solver = new btMultiBodyBlockGSConstraintSolver(mlcp);
 			b3Printf("Constraint Solver: BSG + Lemke");
 			break;
 		default:
 			mlcp = new btDantzigSolver();
-			m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+			m_solver = new btMultiBodyBlockGSConstraintSolver(mlcp);
 			b3Printf("Constraint Solver: BSG + Dantzig");
 			break;
 	}
 
 //	mlcp = new btDantzigSolver();
 ////	mlcp = new btSolveProjectedGaussSeidel();
-//	m_solver = new btMultiBodyBGSConstraintSolver(mlcp);
+//	m_solver = new btMultiBodyBlockGSConstraintSolver(mlcp);
 ////	m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
 ////	m_solver = new btMultiBodyConstraintSolver();
 

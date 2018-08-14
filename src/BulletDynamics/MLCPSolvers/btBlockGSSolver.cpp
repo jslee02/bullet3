@@ -628,5 +628,5 @@ void btBlockGSSolver::setNumFallbacks(int num)
 
 btConstraintSolverType btBlockGSSolver::getSolverType() const
 {
-	return BT_BGS_SOLVER;
+	return BT_BLOCK_GS_SOLVER;
 }

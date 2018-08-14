@@ -13,8 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef BT_BGS_SOLVER_H
-#define BT_BGS_SOLVER_H
+#ifndef BT_BLOCK_GS_SOLVER_H
+#define BT_BLOCK_GS_SOLVER_H
 
 #include "BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
@@ -23,11 +23,11 @@ subject to the following restrictions:
 #include "LinearMath/btThreads.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolverInterface.h"
 
-/// Implementation of the blocked Gauss-Seidel (BGS) constraint solver.
+/// Implementation of the block Gauss-Seidel constraint solver.
 ///
 /// Loosely speaking this class is a mix of btSequentialImpulseConstraintSolver and btMLCPSolver. Specifically, BSG
 /// forms many small MLCPs of subsets of the constraints and solves each MLCP using solvers suitable for small-sized
-/// problems (e.g., Dantzig), and then applies the Gauss-Seidel splitting to the blocked MLCPs unlike the regular
+/// problems (e.g., Dantzig), and then applies the Gauss-Seidel splitting to the block MLCPs unlike the regular
 /// Gauss-Seidel applies it to every single constraint. A block is usually defined as all constraints associated with a
 /// single contact point or any set of constraints better to be solved together at once.
 ///
@@ -113,4 +113,4 @@ public:
 	virtual btConstraintSolverType getSolverType() const;
 };
 
-#endif  // BT_BGS_SOLVER_H
+#endif  // BT_BLOCK_GS_SOLVER_H
