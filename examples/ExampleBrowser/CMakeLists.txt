@@ -328,7 +328,6 @@ SET(BulletExampleBrowser_SRCS
   ../MultiBody/InvertedPendulumPDControl.cpp
   ../MultiBody/InvertedPendulumPDControl.h
  ../MultiBody/MultiBodyConstraintFeedback.cpp
-  ../MultiBody/SerialChains.cpp
   ../MultiBody/MultiDofDemo.cpp
   ../MultiBody/MultiDofDemo.h
   ../RigidBody/RigidBodySoftContact.cpp
@@ -342,6 +341,8 @@ SET(BulletExampleBrowser_SRCS
   ../Constraints/ConstraintPhysicsSetup.h
   ../ConstraintSolvers/Boxes.cpp
   ../ConstraintSolvers/Boxes.h
+  ../ConstraintSolvers/SerialChains.cpp
+  ../ConstraintSolvers/SerialChains.h
 
 
 	../ThirdPartyLibs/stb_image/stb_image.cpp
