@@ -21,16 +21,18 @@ subject to the following restrictions:
 
 class btMultiBodySolverConstraint;
 
-/// Data struct for multibody MLCP block
+/// Data structure for multibody MLCP block
 struct btMultiBodyMLCP
 {
 	btMatrixXu m_A;
 	btVectorXu m_b;
-	//	btVectorXu m_bSplit;
 	btVectorXu m_x;
-	//	btVectorXu m_xSplit;
 	btVectorXu m_lo;
 	btVectorXu m_hi;
+
+	// btVectorXu m_bSplit;
+	// btVectorXu m_xSplit;
+
 	btAlignedObjectArray<int> m_limitDependencies;
 	btAlignedObjectArray<btMultiBodySolverConstraint*> m_allConstraintPtrArray;
 };

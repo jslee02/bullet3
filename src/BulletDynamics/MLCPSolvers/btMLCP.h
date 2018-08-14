@@ -21,16 +21,19 @@ subject to the following restrictions:
 
 class btSolverConstraint;
 
-/// Data struct for MLCP block
+/// Data structure for MLCP block
 struct btMLCP
 {
 	btMatrixXu m_A;
 	btVectorXu m_b;
-	btVectorXu m_bSplit;
 	btVectorXu m_x;
-	btVectorXu m_xSplit;
 	btVectorXu m_lo;
 	btVectorXu m_hi;
+
+	/// When using 'split impulse' we solve two separate (M)LCPs
+	btVectorXu m_bSplit;
+	btVectorXu m_xSplit;
+
 	btAlignedObjectArray<int> m_limitDependencies;
 	btAlignedObjectArray<btSolverConstraint*> m_allConstraintPtrArray;
 };

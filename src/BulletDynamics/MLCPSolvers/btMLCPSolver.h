@@ -19,27 +19,16 @@ subject to the following restrictions:
 
 #include "BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h"
 #include "LinearMath/btMatrixX.h"
+#include "BulletDynamics/MLCPSolvers/btMLCP.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolverInterface.h"
 
 class btMLCPSolver : public btSequentialImpulseConstraintSolver
 {
 
 protected:
+	/// MLCP data structure
+	btMLCP m_mlcp;
 	
-	btMatrixXu m_A;
-	btVectorXu m_b;
-	btVectorXu m_x;
-	btVectorXu m_lo;
-	btVectorXu m_hi;
-	
-	///when using 'split impulse' we solve two separate (M)LCPs
-	btVectorXu m_bSplit;
-	btVectorXu m_xSplit;
-	btVectorXu m_bSplit1;
-	btVectorXu m_xSplit2;
-
-	btAlignedObjectArray<int> m_limitDependencies;
-	btAlignedObjectArray<btSolverConstraint*>	m_allConstraintPtrArray;
 	btMLCPSolverInterface* m_solver;
 	int m_fallback;
 
