@@ -353,6 +353,15 @@ btScalar btBlockGSSolver::solveSingleIteration(int iteration, btCollisionObject*
 		}
 	}
 
+	// TODO(JS): For testing
+	{
+		for (int i = 0; i < m_constraintBlocks.size(); ++i)
+		{
+			const btScalar newSquaredResidual = solveMLCPBlock(m_constraintBlocks[i], infoGlobal);
+			squaredResidual = btMax(newSquaredResidual, squaredResidual);
+		}
+	}
+
 	return squaredResidual;
 }
 
@@ -598,6 +607,15 @@ btScalar btBlockGSSolver::solveMLCPBlock(int index, const btContactSolverInfo& i
 	return squaredResidual;
 }
 
+btScalar btBlockGSSolver::solveMLCPBlock(btBlockGSSolver::btConstraintBlock& constraintBlock, const btContactSolverInfo &infoGlobal)
+{
+	btScalar squaredResidual(0);
+
+	constraintBlock.solve();
+
+	return squaredResidual;
+}
+
 btBlockGSSolver::btBlockGSSolver(btMLCPSolverInterface* solver)
 	: m_defaultSolver(solver),
 	  m_fallback(0)
@@ -629,4 +647,9 @@ void btBlockGSSolver::setNumFallbacks(int num)
 btConstraintSolverType btBlockGSSolver::getSolverType() const
 {
 	return BT_BGS_SOLVER;
+}
+
+btScalar btBlockGSSolver::btConstraintBlock::solve()
+{
+	return 0;
 }

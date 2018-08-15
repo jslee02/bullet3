@@ -35,6 +35,15 @@ subject to the following restrictions:
 class btBlockGSSolver : public btSequentialImpulseConstraintSolver
 {
 protected:
+
+	struct btConstraintBlock
+	{
+		btAlignedObjectArray<btSolverConstraint*> m_allConstraintPtrArray;
+		btConstraintSolver* m_solver;
+
+		btScalar solve();
+	};
+
 	/// Data struct for MLCP block
 	struct btMLCP
 	{
@@ -48,6 +57,8 @@ protected:
 		btAlignedObjectArray<int> m_limitDependencies;
 		btAlignedObjectArray<btSolverConstraint*> m_allConstraintPtrArray;
 	};
+
+	btAlignedObjectArray<btConstraintBlock> m_constraintBlocks;
 
 	/// Array of MLCP blocks.
 	btAlignedObjectArray<btMLCP> m_mlcpArray;
@@ -102,6 +113,9 @@ protected:
 	/// \param[in] index Index to the MLCP block.
 	/// \param[in] infoGlobal Global configurations for contact solver.
 	btScalar solveMLCPBlock(int index, const btContactSolverInfo& infoGlobal);
+
+	btScalar solveMLCPBlock(btConstraintBlock &constraintBlock,
+			const btContactSolverInfo& infoGlobal);
 
 public:
 	/// Constructor
