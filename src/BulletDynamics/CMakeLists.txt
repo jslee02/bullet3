@@ -4,6 +4,7 @@ INCLUDE_DIRECTORIES( ${BULLET_PHYSICS_SOURCE_DIR}/src  )
 
 SET(BulletDynamics_SRCS
 	Character/btKinematicCharacterController.cpp
+    ConstraintSolver/btBlockGSSolver.cpp
 	ConstraintSolver/btConeTwistConstraint.cpp
 	ConstraintSolver/btContactConstraint.cpp
 	ConstraintSolver/btFixedConstraint.cpp
@@ -13,6 +14,7 @@ SET(BulletDynamics_SRCS
 	ConstraintSolver/btGeneric6DofSpring2Constraint.cpp
 	ConstraintSolver/btHinge2Constraint.cpp
 	ConstraintSolver/btHingeConstraint.cpp
+    ConstraintSolver/btImpulseBasedConstraintPool.cpp
 	ConstraintSolver/btPoint2PointConstraint.cpp
 	ConstraintSolver/btSequentialImpulseConstraintSolver.cpp
 	ConstraintSolver/btSequentialImpulseConstraintSolverMt.cpp
@@ -42,7 +44,6 @@ SET(BulletDynamics_SRCS
     Featherstone/btMultiBodyMLCPConstraintSolver.cpp
 	Featherstone/btMultiBodyPoint2Point.cpp
 	Featherstone/btMultiBodySliderConstraint.cpp
-	MLCPSolvers/btBlockGSSolver.cpp
 	MLCPSolvers/btDantzigLCP.cpp
 	MLCPSolvers/btMLCPSolver.cpp
 	MLCPSolvers/btLemkeAlgorithm.cpp
@@ -53,6 +54,7 @@ SET(Root_HDRS
 	../btBulletCollisionCommon.h
 )
 SET(ConstraintSolver_HDRS
+    ConstraintSolver/btBlockGSSolver.h
 	ConstraintSolver/btConeTwistConstraint.h
 	ConstraintSolver/btConstraintSolver.h
 	ConstraintSolver/btContactConstraint.h
@@ -64,6 +66,7 @@ SET(ConstraintSolver_HDRS
 	ConstraintSolver/btGeneric6DofSpring2Constraint.h
 	ConstraintSolver/btHinge2Constraint.h
 	ConstraintSolver/btHingeConstraint.h
+    ConstraintSolver/btImpulseBasedConstraintPool.h
 	ConstraintSolver/btJacobianEntry.h
 	ConstraintSolver/btPoint2PointConstraint.h
 	ConstraintSolver/btSequentialImpulseConstraintSolver.h
@@ -111,7 +114,6 @@ SET(Featherstone_HDRS
 )
 
 SET(MLCPSolvers_HDRS
-	MLCPSolvers/btBlockGSSolver.h
 	MLCPSolvers/btDantzigLCP.h
 	MLCPSolvers/btDantzigSolver.h
     MLCPSolvers/btMLCP.h

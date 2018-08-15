@@ -23,7 +23,7 @@ subject to the following restrictions:
 
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btAlignedObjectArray.h"
-#include "BulletDynamics/MLCPSolvers/btBlockGSSolver.h"
+#include "BulletDynamics/ConstraintSolver/btBlockGSSolver.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btLemkeSolver.h"

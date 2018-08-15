@@ -113,4 +113,75 @@ public:
 	virtual btConstraintSolverType getSolverType() const;
 };
 
+class btConstraintBlock
+{
+protected:
+	// Possible fields:
+	// - Constraint solver
+	// - Policy that represents all the constraints
+	// - List of constraints
+	btAlignedObjectArray<btSolverConstraint*> m_allConstraintPtrArray;
+
+	btConstraintSolver* m_constraintSolver;
+	// TODO(JS): Ownership
+
+public:
+	/// Defualt constructor
+	btConstraintBlock() = default;
+
+	/// Defualt destructor
+	virtual ~btConstraintBlock() = default;
+};
+
+class btBlockGSSolver2 : public btSequentialImpulseConstraintSolver
+{
+protected:
+	btAlignedObjectArray<btConstraintBlock> m_blocks;
+
+	virtual btScalar solveGroupCacheFriendlySetup(
+		btCollisionObject** bodies,
+		int numBodies,
+		btPersistentManifold** manifoldPtr,
+		int numManifolds,
+		btTypedConstraint** constraints,
+		int numConstraints,
+		const btContactSolverInfo& infoGlobal,
+		btIDebugDraw* debugDrawer);
+
+	virtual btScalar solveGroupCacheFriendlyIterations(
+		btCollisionObject** bodies,
+		int numBodies,
+		btPersistentManifold** manifoldPtr,
+		int numManifolds,
+		btTypedConstraint** constraints,
+		int numConstraints,
+		const btContactSolverInfo& infoGlobal,
+		btIDebugDraw* debugDrawer);
+
+	virtual btScalar solveGroupCacheFriendlyFinish(
+		btCollisionObject** bodies,
+		int numBodies,
+		const btContactSolverInfo& infoGlobal);
+
+public:
+	btBlockGSSolver2();
+
+	// Documentation inherited
+	btScalar solveGroup(
+		btCollisionObject** bodies,
+		int numBodies,
+		btPersistentManifold** manifold,
+		int numManifolds,
+		btTypedConstraint** constraints,
+		int numConstraints,
+		const btContactSolverInfo& infoGlobal,
+		class btIDebugDraw* debugDrawer,
+		btDispatcher* dispatcher) BT_OVERRIDE;
+
+	// Documentation inherited
+	void reset() BT_OVERRIDE;
+
+	btConstraintSolverType getSolverType() const BT_OVERRIDE;
+};
+
 #endif  // BT_BLOCK_GS_SOLVER_H

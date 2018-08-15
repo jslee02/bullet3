@@ -18,7 +18,7 @@ subject to the following restrictions:
 #include <string>
 #include "LinearMath/btMatrixX.h"
 #include "LinearMath/btQuickprof.h"
-#include "btSolveProjectedGaussSeidel.h"
+#include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"  // TODO(JS): remove
 
 // Helper function to compute a delta velocity in the constraint space.
 static btScalar computeDeltaVelocityInConstraintSpace(
@@ -133,6 +133,9 @@ static btScalar computeConstraintMatrixOffDiagElementRigidBody(
 
 btScalar btBlockGSSolver::solveGroupCacheFriendlySetup(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
 {
+	// TODO(JS):
+	// Build blocks and call solveGroupSetup() of each block
+
 	const btScalar val = btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 
 	{
@@ -627,6 +630,58 @@ void btBlockGSSolver::setNumFallbacks(int num)
 }
 
 btConstraintSolverType btBlockGSSolver::getSolverType() const
+{
+	return BT_BLOCK_GS_SOLVER;
+}
+
+btScalar btBlockGSSolver2::solveGroupCacheFriendlySetup(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+{
+	const btScalar val = btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+
+	return val;
+}
+
+btScalar btBlockGSSolver2::solveGroupCacheFriendlyIterations(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+{
+	for (int i = 0; i < m_blocks.size(); ++i)
+	{
+		//		m_blocks[i].m_constraintSolver
+	}
+
+	return btScalar(0);
+}
+
+btScalar btBlockGSSolver2::solveGroupCacheFriendlyFinish(btCollisionObject** bodies, int numBodies, const btContactSolverInfo& infoGlobal)
+{
+	return btScalar(0);
+}
+
+btBlockGSSolver2::btBlockGSSolver2()
+{
+	// Do nothing
+}
+
+btScalar btBlockGSSolver2::solveGroup(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifold, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer, btDispatcher* dispatcher)
+{
+	BT_PROFILE("solveGroup");
+
+	// basically split constraints into blocks
+
+	solveGroupCacheFriendlySetup(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+
+	solveGroupCacheFriendlyIterations(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+
+	solveGroupCacheFriendlyFinish(bodies, numBodies, infoGlobal);
+
+	return btScalar(0);
+}
+
+void btBlockGSSolver2::reset()
+{
+	// Do nothing
+}
+
+btConstraintSolverType btBlockGSSolver2::getSolverType() const
 {
 	return BT_BLOCK_GS_SOLVER;
 }
