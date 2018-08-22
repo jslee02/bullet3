@@ -19,6 +19,7 @@ subject to the following restrictions:
 #include "LinearMath/btMatrixX.h"
 #include "LinearMath/btQuickprof.h"
 #include "btSolveProjectedGaussSeidel.h"
+#include "BulletDynamics/ConstraintSolver/btConstraintSolver.h"
 
 // Helper function to compute a delta velocity in the constraint space.
 static btScalar computeDeltaVelocityInConstraintSpace(
@@ -646,7 +647,7 @@ void btBlockGSSolver::setNumFallbacks(int num)
 
 btConstraintSolverType btBlockGSSolver::getSolverType() const
 {
-	return BT_BGS_SOLVER;
+	return BT_BLOCK_GAUSS_SEIDEL_SOLVER;
 }
 
 btScalar btBlockGSSolver::btConstraintBlock::solve()

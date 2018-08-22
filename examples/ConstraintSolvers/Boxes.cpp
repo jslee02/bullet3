@@ -23,6 +23,9 @@ subject to the following restrictions:
 
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btAlignedObjectArray.h"
+#include "BulletDynamics/ConstraintSolver/btSplittingPolicy.h"
+#include "BulletDynamics/ConstraintSolver/btBlockGaussSeidelConstraintSolver.h"
+#include "BulletDynamics/ConstraintSolver/btConstraintSolverFactory.h"
 #include "BulletDynamics/MLCPSolvers/btBlockGSSolver.h"
 #include "BulletDynamics/MLCPSolvers/btMLCPSolver.h"
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
@@ -65,7 +68,7 @@ void Boxes::initPhysics()
 	}
 
 	btMLCPSolverInterface* mlcp;
-	btSequentialImpulseConstraintSolver* sol;
+	btConstraintSolver* sol;
 	switch (g_constraintSolverType++)
 	{
 		case 0:
@@ -92,6 +95,19 @@ void Boxes::initPhysics()
 			// b3Printf("Constraint Solver: BGS + Lemke");
 			break;
 	}
+
+	btBlockGaussSeidelConstraintSolver* sol2 = new btBlockGaussSeidelConstraintSolver();
+
+	btChainedBlockGenerators* policy = new btChainedBlockGenerators();
+
+	btSimpleConstraintBlockGenerator* finalFilter = new btSimpleConstraintBlockGenerator(new btSequentialImpulseConstraintSolver());
+
+	policy->pushBack(finalFilter);
+
+	sol2->setSplittingPolicy(policy);
+
+	sol = sol2;
+
 	m_dynamicsWorld->setConstraintSolver(sol);
 
 	//m_dynamicsWorld->setGravity(btVector3(0,0,0));

@@ -35,7 +35,38 @@ enum btConstraintSolverType
 	BT_SEQUENTIAL_IMPULSE_SOLVER=1,
 	BT_MLCP_SOLVER=2,
 	BT_NNCG_SOLVER=4,
-	BT_BGS_SOLVER=8,
+	BT_BLOCK_GAUSS_SEIDEL_SOLVER=8,
+};
+
+// TODO(JS): Name TBD
+struct btSolverConstraintInput
+{
+	btCollisionObject** m_bodies;
+	int m_numBodies;
+	btPersistentManifold** m_manifoldPtr;
+	int m_numManifolds;
+	btTypedConstraint** m_constraints;
+	int m_numConstraints;
+
+	btPersistentManifold* popManifold(int index)
+	{
+		btPersistentManifold* tmp = m_manifoldPtr[index];
+		m_manifoldPtr[index] = m_manifoldPtr[m_numManifolds - 1];
+		m_numManifolds--;
+
+		return tmp;
+	}
+
+	bool empty() const
+	{
+		if (m_numBodies == 0)
+			return true;
+
+		if (m_numManifolds == 0 && m_numConstraints == 0)
+			return true;
+		else
+			return false;
+	}
 };
 
 class btConstraintSolver

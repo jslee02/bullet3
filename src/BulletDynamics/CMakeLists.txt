@@ -4,7 +4,9 @@ INCLUDE_DIRECTORIES( ${BULLET_PHYSICS_SOURCE_DIR}/src  )
 
 SET(BulletDynamics_SRCS
 	Character/btKinematicCharacterController.cpp
+	ConstraintSolver/btBlockGaussSeidelConstraintSolver.cpp
 	ConstraintSolver/btConeTwistConstraint.cpp
+	ConstraintSolver/btConstraintSolverFactory.cpp
 	ConstraintSolver/btContactConstraint.cpp
 	ConstraintSolver/btFixedConstraint.cpp
 	ConstraintSolver/btGearConstraint.cpp
@@ -20,6 +22,7 @@ SET(BulletDynamics_SRCS
 	ConstraintSolver/btNNCGConstraintSolver.cpp
 	ConstraintSolver/btSliderConstraint.cpp
 	ConstraintSolver/btSolve2LinearConstraint.cpp
+	ConstraintSolver/btSplittingPolicy.cpp
 	ConstraintSolver/btTypedConstraint.cpp
 	ConstraintSolver/btUniversalConstraint.cpp
 	Dynamics/btDiscreteDynamicsWorld.cpp
@@ -43,7 +46,8 @@ SET(BulletDynamics_SRCS
 	Featherstone/btMultiBodySliderConstraint.cpp
 	MLCPSolvers/btBlockGSSolver.cpp
 	MLCPSolvers/btDantzigLCP.cpp
-	MLCPSolvers/btMLCPSolver.cpp
+    MLCPSolvers/btMLCPSolver.cpp
+	MLCPSolvers/btMLCPSolverFactory.cpp
 	MLCPSolvers/btLemkeAlgorithm.cpp
 )
 
@@ -52,9 +56,11 @@ SET(Root_HDRS
 	../btBulletCollisionCommon.h
 )
 SET(ConstraintSolver_HDRS
+	ConstraintSolver/btBlockGaussSeidelConstraintSolver.h
 	ConstraintSolver/btConeTwistConstraint.h
 	ConstraintSolver/btConstraintSolver.h
 	ConstraintSolver/btContactConstraint.h
+	ConstraintSolver/btConstraintSolverFactory.h
 	ConstraintSolver/btContactSolverInfo.h
 	ConstraintSolver/btFixedConstraint.h
 	ConstraintSolver/btGearConstraint.h
@@ -72,6 +78,7 @@ SET(ConstraintSolver_HDRS
 	ConstraintSolver/btSolve2LinearConstraint.h
 	ConstraintSolver/btSolverBody.h
 	ConstraintSolver/btSolverConstraint.h
+	ConstraintSolver/btSplittingPolicy.h
 	ConstraintSolver/btTypedConstraint.h
 	ConstraintSolver/btUniversalConstraint.h
 )
@@ -112,6 +119,7 @@ SET(MLCPSolvers_HDRS
 	MLCPSolvers/btDantzigLCP.h
 	MLCPSolvers/btDantzigSolver.h
 	MLCPSolvers/btMLCPSolver.h
+	MLCPSolvers/btMLCPSolverFactory.h
 	MLCPSolvers/btMLCPSolverInterface.h
 	MLCPSolvers/btPATHSolver.h
 	MLCPSolvers/btSolveProjectedGaussSeidel.h

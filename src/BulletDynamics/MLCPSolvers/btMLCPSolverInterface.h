@@ -19,6 +19,12 @@ subject to the following restrictions:
 
 #include "LinearMath/btMatrixX.h"
 
+enum btMLCPSolverType
+{
+	BT_DANTZIG = 1,
+	// TODO(JS): Populate
+};
+
 class btMLCPSolverInterface
 {
 public:
