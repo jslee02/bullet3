@@ -18,6 +18,8 @@ subject to the following restrictions:
 
 #include "btMultiBodyConstraintSolver.h"
 
+#include "LinearMath/btThreads.h"
+
 struct btBlockConstraintSolverConfig
 {
 	int m_solverType;  //SI or MLCP Dantzig
@@ -28,11 +30,7 @@ struct btBlockConstraintSolverConfig
 
 struct btConstraintBlock
 {
-	btConstraintBlock()
-		: m_constraintConfigId(-1)
-	{
-		// Do nothing
-	}
+	/// \{ \name Rigid Body Data
 
 	btCollisionObject** m_bodies;
 	int m_numBodies;
@@ -43,18 +41,50 @@ struct btConstraintBlock
 	btMultiBodyConstraint** m_multiBodyConstraints;
 	int m_numMultiBodyConstraints;
 
+	/// Pointer to the block constraint solver's body pool, which will be shared
+	/// by all the constraint blocks.
+	btAlignedObjectArray<btSolverBody>* m_tmpSolverBodyPool;
+
+	btConstraintArray m_tmpSolverContactConstraintPool;
+	btConstraintArray m_tmpSolverNonContactConstraintPool;
+	btConstraintArray m_tmpSolverContactFrictionConstraintPool;
+	btConstraintArray m_tmpSolverContactRollingFrictionConstraintPool;
+
+	/// \}
+
+	/// \{ \name Rigid Body Data
+
+	btMultiBodyConstraintArray m_multiBodyNonContactConstraints;
+
+	btMultiBodyConstraintArray m_multiBodyNormalContactConstraints;
+	btMultiBodyConstraintArray m_multiBodyFrictionContactConstraints;
+	btMultiBodyConstraintArray m_multiBodyTorsionalFrictionContactConstraints;
+	// TODO(JS): Change the array names to be more consistent for both of rigid body and multibody
+
+	/// Pointer to the block constraint solver's multi body Jacobian data, which
+	/// will be shared by all the constraint blocks.
+	btMultiBodyJacobianData* m_data;
+
+	/// \}
+
+	btMultiBodyConstraintSolver* m_solver;
+
 	int m_constraintConfigId;
+
+	btConstraintBlock();
 };
 
 class btBlockSplittingPolicy
 {
 protected:
-	virtual ~btBlockSplittingPolicy()
-	{
-		// Do nothing
-	}
+	virtual ~btBlockSplittingPolicy();
 
 public:
+	/// Splits a set of constraints into multiple subsets.
+	///
+	/// \param[in] blockInput
+	/// \param[in] availableConfigs
+	/// \param[in,out] blocksOutput
 	virtual void split(
 		const btConstraintBlock& blockInput,
 		const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs,
@@ -63,16 +93,50 @@ public:
 
 class btMultiBodyBlockConstraintSolver : public btMultiBodyConstraintSolver
 {
+protected:
+	/// Splitting policy. Assumed not a null.
+	btBlockSplittingPolicy* m_splittingPolicy;
+
+	/// Array of constraint configurations for constraint blocks.
+	btAlignedObjectArray<btBlockConstraintSolverConfig> m_configs;
+
+	/// Array of constraint blocks.
+	btAlignedObjectArray<btConstraintBlock> m_blocks;
+
 public:
+	/// Constructor
 	btMultiBodyBlockConstraintSolver();
+
+	/// Destructor
 	virtual ~btMultiBodyBlockConstraintSolver();
 
-	virtual void solveMultiBodyGroup(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifold, int numManifolds, btTypedConstraint** constraints, int numConstraints, btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& info, btIDebugDraw* debugDrawer, btDispatcher* dispatcher);
+protected:
+	// Documentation inherited.
+	void solveMultiBodyGroup(btCollisionObject** bodies,
+							 int numBodies,
+							 btPersistentManifold** manifold,
+							 int numManifolds,
+							 btTypedConstraint** constraints,
+							 int numConstraints,
+							 btMultiBodyConstraint** multiBodyConstraints,
+							 int numMultiBodyConstraints,
+							 const btContactSolverInfo& info,
+							 btIDebugDraw* debugDrawer,
+							 btDispatcher* dispatcher) BT_OVERRIDE;
 
+	/// Sets the splitting policy.
 	virtual void setSplittingPolicy(btBlockSplittingPolicy* policy);
 
+	/// Adds a constraint block configuration and returns the total number of configurations added to this solver.
 	virtual int addConfig(btBlockConstraintSolverConfig& config);
+
+	/// Returns the number of configurations added to this solver.
 	virtual int getNumConfigs() const;
+
+	/// Removes an configuration at \c configIndex
+	///
+	/// \param[in] configIndex The configuration indext in the range of [0, numConfigs). Passing out of the range is an
+	/// undefined behavior.
 	virtual void removeConfig(int configIndex);  //in range 0..numConfigs
 };
 
