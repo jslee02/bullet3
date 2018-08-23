@@ -31,6 +31,7 @@ SET(BulletDynamics_SRCS
 	Vehicle/btRaycastVehicle.cpp
 	Vehicle/btWheelInfo.cpp
 	Featherstone/btMultiBody.cpp
+	Featherstone/btMultiBodyBlockConstraintSolver.cpp
 	Featherstone/btMultiBodyConstraint.cpp
 	Featherstone/btMultiBodyConstraintSolver.cpp
 	Featherstone/btMultiBodyDynamicsWorld.cpp
@@ -91,6 +92,7 @@ SET(Vehicle_HDRS
 
 SET(Featherstone_HDRS
 	Featherstone/btMultiBody.h
+	Featherstone/btMultiBodyBlockConstraintSolver.h
 	Featherstone/btMultiBodyConstraint.h
 	Featherstone/btMultiBodyConstraintSolver.h
 	Featherstone/btMultiBodyDynamicsWorld.h
