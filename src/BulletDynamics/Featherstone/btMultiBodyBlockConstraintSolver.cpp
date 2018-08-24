@@ -124,7 +124,7 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	{
 		btConstraintBlock& block = m_blocks[i];
 		btMultiBodyConstraintSolver* solver = block.m_solver;
-		solver->solveGroupCacheFriendlyFinishNew(
+		solver->solveMultiBodyGroupCacheFriendlyFinishNew(
 			block.m_tmpSolverBodyPool,
 			block.m_tmpSolverNonContactConstraintPool,
 			block.m_tmpSolverContactConstraintPool,
