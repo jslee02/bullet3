@@ -1520,7 +1520,7 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 	BT_PROFILE("solveGroupCacheFriendlySetup");
 
 	solveGroupConvertConstraints(bodies, numBodies, manifoldPtr, numManifolds,constraints, numConstraints, infoGlobal, debugDrawer);
-	solveGroupSolverSpecificInit(infoGlobal, debugDrawer);
+	solveGroupSolverSpecificInit(&m_tmpSolverBodyPool, m_tmpSolverContactConstraintPool, m_tmpSolverNonContactConstraintPool, m_tmpSolverContactFrictionConstraintPool, m_tmpSolverContactRollingFrictionConstraintPool, infoGlobal, debugDrawer);
 
 	return 0;
 }
@@ -1621,13 +1621,20 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraints(btCol
 	return 0.f;
 }
 
-btScalar btSequentialImpulseConstraintSolver::solveGroupSolverSpecificInit(const btContactSolverInfo& infoGlobal, btIDebugDraw* /*debugDrawer*/)
+btScalar btSequentialImpulseConstraintSolver::solveGroupSolverSpecificInit(
+	btAlignedObjectArray<btSolverBody>* /*solverBodyPool*/,
+	btConstraintArray& solverContactConstraintPool,
+	btConstraintArray& solverNonContactConstraintPool,
+	btConstraintArray& solverContactFrictionConstraintPool,
+	btConstraintArray& /*solverContactRollingFrictionConstraintPool*/,
+	const btContactSolverInfo& infoGlobal,
+	btIDebugDraw* /*debugDrawer*/)
 {
 	//	btContactSolverInfo info = infoGlobal;
 
-	int numNonContactPool = m_tmpSolverNonContactConstraintPool.size();
-	int numConstraintPool = m_tmpSolverContactConstraintPool.size();
-	int numFrictionPool = m_tmpSolverContactFrictionConstraintPool.size();
+	int numNonContactPool = solverNonContactConstraintPool.size();
+	int numConstraintPool = solverContactConstraintPool.size();
+	int numFrictionPool = solverContactFrictionConstraintPool.size();
 
 	///@todo: use stack allocator for such temporarily memory, same for solver bodies/constraints
 	m_orderNonContactConstraintPool.resizeNoInitialize(numNonContactPool);
@@ -1660,9 +1667,16 @@ btScalar btSequentialImpulseConstraintSolver::solveSingleIteration(int iteration
 {
     BT_PROFILE("solveSingleIteration");
 	return solveSingleIterationNew(
-		iteration, constraints, numConstraints, &m_tmpSolverBodyPool, m_tmpSolverContactConstraintPool,
-		m_tmpSolverNonContactConstraintPool, m_tmpSolverContactFrictionConstraintPool,
-		m_tmpSolverContactRollingFrictionConstraintPool, infoGlobal, debugDrawer);
+		iteration,
+		constraints,
+		numConstraints,
+		&m_tmpSolverBodyPool,
+		m_tmpSolverNonContactConstraintPool,
+		m_tmpSolverContactConstraintPool,
+		m_tmpSolverContactFrictionConstraintPool,
+		m_tmpSolverContactRollingFrictionConstraintPool,
+		infoGlobal,
+		debugDrawer);
 }
 
 btScalar btSequentialImpulseConstraintSolver::solveSingleIterationNew(

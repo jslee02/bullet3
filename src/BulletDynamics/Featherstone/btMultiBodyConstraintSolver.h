@@ -119,8 +119,8 @@ public:
 		const btContactSolverInfo& infoGlobal);
 
 	virtual void solveMultiBodyGroup(btCollisionObject * *bodies, int numBodies, btPersistentManifold** manifold, int numManifolds, btTypedConstraint** constraints, int numConstraints, btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& info, btIDebugDraw* debugDrawer, btDispatcher* dispatcher);
-	virtual void solveMultiBodyGroupPrestep(btCollisionObject * *bodies, int numBodies, btPersistentManifold** manifold, int numManifolds, btTypedConstraint** constraints, int numConstraints, btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& info, btIDebugDraw* debugDrawer, btDispatcher* dispatcher);
-	virtual void solveMultiBodyGroupPoststep(btCollisionObject * *bodies, int numBodies, btPersistentManifold** manifold, int numManifolds, btTypedConstraint** constraints, int numConstraints, btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& info, btIDebugDraw* debugDrawer, btDispatcher* dispatcher);
+	virtual void solveMultiBodyGroupPrestep(btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& info, btIDebugDraw* debugDrawer, btDispatcher* dispatcher);
+	virtual void solveMultiBodyGroupPoststep(btMultiBodyConstraint** multiBodyConstraints, int numBodies, const btContactSolverInfo& info, btIDebugDraw* debugDrawer, btDispatcher* dispatcher);
 };
 
 #endif  //BT_MULTIBODY_CONSTRAINT_SOLVER_H

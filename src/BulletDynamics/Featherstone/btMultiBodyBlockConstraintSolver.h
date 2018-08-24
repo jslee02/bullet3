@@ -52,7 +52,7 @@ struct btConstraintBlock
 
 	/// \}
 
-	/// \{ \name Rigid Body Data
+	/// \{ \name Multibody Data
 
 	btMultiBodyConstraintArray m_multiBodyNonContactConstraints;
 
@@ -64,6 +64,9 @@ struct btConstraintBlock
 	/// Pointer to the block constraint solver's multi body Jacobian data, which
 	/// will be shared by all the constraint blocks.
 	btMultiBodyJacobianData* m_data;
+
+	btMultiBodyConstraint** m_tmpMultiBodyConstraints;
+	int m_tmpNumMultiBodyConstraints;
 
 	/// \}
 

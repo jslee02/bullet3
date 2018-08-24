@@ -49,6 +49,12 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	btIDebugDraw* debugDrawer,
 	btDispatcher* dispatcher)
 {
+	// Customized solveMultiBodyGroup() for constraint blocks to avoid calling
+	// btSequentialImpulseConstraintSolver::solveGroupConvertConstraints() for each constraint blocks because
+	// the constraint conversion should be done once by the block solver.
+
+	// 1. Setup
+
 	// Convert rigid bodies/multibodies, joints, contacts into constraints.
 	solveGroupConvertConstraints(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
 
@@ -58,24 +64,23 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	// Setup constraint blocks
 	for (int i = 0; i < m_blocks.size(); ++i)
 	{
-		btMultiBodyConstraintSolver* solver = m_blocks[i].m_solver;
-
-		// Customized solveMultiBodyGroup() for constraint blocks to avoid calling
-		// btSequentialImpulseConstraintSolver::solveGroupConvertConstraints() for each constraint blocks because
-		// the constraint conversion should be done once by the block solver.
+		btConstraintBlock& block = m_blocks[i];
+		btMultiBodyConstraintSolver* solver = block.m_solver;
 		solver->solveMultiBodyGroupPrestep(
-			bodies, numBodies, manifold, numManifolds, constraints, numConstraints, multiBodyConstraints,
-			numMultiBodyConstraints, info, debugDrawer, dispatcher);
-		solver->solveGroupSolverSpecificInit(info, debugDrawer);
-		solver->solveMultiBodyGroupPoststep(
-			bodies, numBodies, manifold, numManifolds, constraints, numConstraints, multiBodyConstraints,
-			numMultiBodyConstraints, info, debugDrawer, dispatcher);
-		// TODO(JS): Consider change the arguments to be similar to blow function calls
+			multiBodyConstraints, numMultiBodyConstraints, info, debugDrawer, dispatcher);
+		solver->solveGroupSolverSpecificInit(
+			block.m_tmpSolverBodyPool,
+			block.m_tmpSolverNonContactConstraintPool,
+			block.m_tmpSolverContactConstraintPool,
+			block.m_tmpSolverContactFrictionConstraintPool,
+			block.m_tmpSolverContactRollingFrictionConstraintPool,
+			info,
+			debugDrawer);
 	}
 
-	// Perform Gauss-Seidel iterations
+	// 2. Iterations: perform Gauss-Seidel iterations
 	// TODO(JS): Add split impulse
-	int maxIterations = m_maxOverrideNumSolverIterations > info.m_numIterations ? m_maxOverrideNumSolverIterations : info.m_numIterations;
+	const int maxIterations = m_maxOverrideNumSolverIterations > info.m_numIterations ? m_maxOverrideNumSolverIterations : info.m_numIterations;
 
 	for (int iteration = 0; iteration < maxIterations; ++iteration)
 	{
@@ -114,12 +119,11 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 		}
 	}
 
-	// Finialize constraint blocks
+	// 3. Finish constraint blocks
 	for (int i = 0; i < m_blocks.size(); ++i)
 	{
 		btConstraintBlock& block = m_blocks[i];
 		btMultiBodyConstraintSolver* solver = block.m_solver;
-
 		solver->solveGroupCacheFriendlyFinishNew(
 			block.m_tmpSolverBodyPool,
 			block.m_tmpSolverNonContactConstraintPool,
@@ -132,9 +136,9 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 			block.m_multiBodyFrictionContactConstraints,
 			block.m_multiBodyTorsionalFrictionContactConstraints,
 			info);
+		solver->solveMultiBodyGroupPoststep(
+			block.m_tmpMultiBodyConstraints, block.m_numMultiBodyConstraints, info, debugDrawer, dispatcher);
 	}
-
-	// TODO(JS): convert solver body to multibody/rigidbody
 }
 
 void btMultiBodyBlockConstraintSolver::setSplittingPolicy(btBlockSplittingPolicy* policy)

@@ -1527,11 +1527,11 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinishNew(
 	btConstraintArray& solverContactConstraintPool,
 	btConstraintArray& solverContactFrictionConstraintPool,
 	btConstraintArray& solverContactRollingFrictionConstraintPool,
-	btMultiBodyJacobianData* m_data,
+	btMultiBodyJacobianData* /*m_data*/,
 	btMultiBodyConstraintArray& multiBodyNonContactConstraints,
 	btMultiBodyConstraintArray& multiBodyNormalContactConstraints,
 	btMultiBodyConstraintArray& multiBodyFrictionContactConstraints,
-	btMultiBodyConstraintArray& multiBodyTorsionalFrictionContactConstraints,
+	btMultiBodyConstraintArray& /*multiBodyTorsionalFrictionContactConstraints*/,
 	const btContactSolverInfo& infoGlobal)
 {
 	BT_PROFILE("btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinishNew");
@@ -1689,20 +1689,20 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinishNew(
 void btMultiBodyConstraintSolver::solveMultiBodyGroup(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifold, int numManifolds, btTypedConstraint** constraints, int numConstraints, btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& info, btIDebugDraw* debugDrawer, btDispatcher* dispatcher)
 {
 	//printf("solveMultiBodyGroup start\n");
-	solveMultiBodyGroupPrestep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, multiBodyConstraints, numMultiBodyConstraints, info, debugDrawer, dispatcher);
+	solveMultiBodyGroupPrestep(multiBodyConstraints, numMultiBodyConstraints, info, debugDrawer, dispatcher);
 
 	btSequentialImpulseConstraintSolver::solveGroup(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer, dispatcher);
 
-	solveMultiBodyGroupPoststep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, multiBodyConstraints, numMultiBodyConstraints, info, debugDrawer, dispatcher);
+	solveMultiBodyGroupPoststep(multiBodyConstraints, numMultiBodyConstraints, info, debugDrawer, dispatcher);
 }
 
-void btMultiBodyConstraintSolver::solveMultiBodyGroupPrestep(btCollisionObject** /*bodies*/, int /*numBodies*/, btPersistentManifold** /*manifold*/, int /*numManifolds*/, btTypedConstraint** /*constraints*/, int /*numConstraints*/, btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& /*info*/, btIDebugDraw* /*debugDrawer*/, btDispatcher* /*dispatcher*/)
+void btMultiBodyConstraintSolver::solveMultiBodyGroupPrestep(btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& /*info*/, btIDebugDraw* /*debugDrawer*/, btDispatcher* /*dispatcher*/)
 {
 	m_tmpMultiBodyConstraints = multiBodyConstraints;
 	m_tmpNumMultiBodyConstraints = numMultiBodyConstraints;
 }
 
-void btMultiBodyConstraintSolver::solveMultiBodyGroupPoststep(btCollisionObject** /*bodies*/, int /*numBodies*/, btPersistentManifold** /*manifold*/, int /*numManifolds*/, btTypedConstraint** /*constraints*/, int /*numConstraints*/, btMultiBodyConstraint** /*multiBodyConstraints*/, int /*numMultiBodyConstraints*/, const btContactSolverInfo& /*info*/, btIDebugDraw* /*debugDrawer*/, btDispatcher* /*dispatcher*/)
+void btMultiBodyConstraintSolver::solveMultiBodyGroupPoststep(btMultiBodyConstraint** /*multiBodyConstraints*/, int /*numMultiBodyConstraints*/, const btContactSolverInfo& /*info*/, btIDebugDraw* /*debugDrawer*/, btDispatcher* /*dispatcher*/)
 {
 	m_tmpMultiBodyConstraints = 0;
 	m_tmpNumMultiBodyConstraints = 0;

@@ -164,7 +164,14 @@ public:
 
 	virtual btScalar solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher);
 	virtual btScalar solveGroupConvertConstraints(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer);
-	virtual btScalar solveGroupSolverSpecificInit(const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer);
+	virtual btScalar solveGroupSolverSpecificInit(
+		btAlignedObjectArray<btSolverBody>* solverBodyPool,
+		btConstraintArray& solverContactConstraintPool,
+		btConstraintArray& solverNonContactConstraintPool,
+		btConstraintArray& solverContactFrictionConstraintPool,
+		btConstraintArray& solverContactRollingFrictionConstraintPool,
+		const btContactSolverInfo& infoGlobal,
+		btIDebugDraw* debugDrawer);
 
 	///clear internal cached data and reset random seed
 	virtual	void	reset();
