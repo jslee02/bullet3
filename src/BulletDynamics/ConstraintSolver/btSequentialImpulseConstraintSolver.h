@@ -34,10 +34,15 @@ ATTRIBUTE_ALIGNED16(class) btSequentialImpulseConstraintSolver : public btConstr
 {
 protected:
 	btAlignedObjectArray<btSolverBody>      m_tmpSolverBodyPool;
-	btConstraintArray			m_tmpSolverContactConstraintPool;
 	btConstraintArray			m_tmpSolverNonContactConstraintPool;
+	btConstraintArray			m_tmpSolverContactConstraintPool;
 	btConstraintArray			m_tmpSolverContactFrictionConstraintPool;
 	btConstraintArray			m_tmpSolverContactRollingFrictionConstraintPool;
+
+	btAlignedObjectArray<btSolverConstraint*> m_tmpSolverNonContactConstraintPtrPool;
+	btAlignedObjectArray<btSolverConstraint*> m_tmpSolverContactConstraintPtrPool;
+	btAlignedObjectArray<btSolverConstraint*> m_tmpSolverContactFrictionConstraintPtrPool;
+	btAlignedObjectArray<btSolverConstraint*> m_tmpSolverContactRollingFrictionConstraintPtrPool;
 
 	btAlignedObjectArray<int>	m_orderTmpConstraintPool;
 	btAlignedObjectArray<int>	m_orderNonContactConstraintPool;
@@ -125,34 +130,57 @@ protected:
 
 protected:
 
-    void writeBackContacts(int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
-    void writeBackJoints(int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
-    void writeBackBodies(int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
+	void writeBackContacts(int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
+	void writeBackContactsNew(btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool, int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
+	void writeBackJoints(int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
+	void writeBackJointsNew(btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool, int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
+	void writeBackBodies(int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
+	void writeBackBodiesNew(btAlignedObjectArray<btSolverBody>* solverBodyPool, int iBegin, int iEnd, const btContactSolverInfo& infoGlobal);
 
 	virtual btScalar solveGroupCacheFriendlySetup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 
 	virtual btScalar solveGroupCacheFriendlyIterations(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
+	virtual btScalar solveGroupCacheFriendlyIterationsNew(
+		btTypedConstraint** constraints,
+		int numConstraints,
+		btAlignedObjectArray<btSolverBody>* solverBodyPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
+		const btContactSolverInfo& infoGlobal,
+		btIDebugDraw* debugDrawer);
 	virtual void solveGroupCacheFriendlySplitImpulseIterations(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
+	virtual void solveGroupCacheFriendlySplitImpulseIterationsNew(
+		btTypedConstraint** constraints,
+		int numConstraints,
+		btAlignedObjectArray<btSolverBody>* solverBodyPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
+		const btContactSolverInfo& infoGlobal,
+		btIDebugDraw* debugDrawer);
 	virtual btScalar solveSingleIteration(int iteration, btCollisionObject** bodies ,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 	virtual btScalar solveSingleIterationNew(
 		int iteration,
 		btTypedConstraint** constraints,  // TODO(JS): document that this is required by a obsolute function
 		int numConstraints,  // TODO(JS): document that this is required by a obsolute function
 		btAlignedObjectArray<btSolverBody>* solverBodyPool,
-		btConstraintArray& solverNonContactConstraintPool,
-		btConstraintArray& solverContactConstraintPool,
-		btConstraintArray& solverContactFrictionConstraintPool,
-		btConstraintArray& solverContactRollingFrictionConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+		btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
 		const btContactSolverInfo& infoGlobal,
 		btIDebugDraw* /*debugDrawer*/);
 
 	virtual btScalar solveGroupCacheFriendlyFinish(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
 	virtual btScalar solveGroupCacheFriendlyFinishNew(
 			btAlignedObjectArray<btSolverBody>* solverBodyPool,
-			btConstraintArray& solverNonContactConstraintPool,
-			btConstraintArray& solverContactConstraintPool,
-			btConstraintArray& solverContactFrictionConstraintPool,
-			btConstraintArray& solverContactRollingFrictionConstraintPool,
+			btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+			btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+			btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+			btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
 			const btContactSolverInfo& infoGlobal);
 
 public:
@@ -163,13 +191,21 @@ public:
 	virtual ~btSequentialImpulseConstraintSolver();
 
 	virtual btScalar solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher);
-	virtual btScalar solveGroupConvertConstraints(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer);
+	virtual btScalar solveGroupConvertConstraints(
+		btCollisionObject** bodies,
+		int numBodies,
+		btPersistentManifold** manifoldPtr,
+		int numManifolds,
+		btTypedConstraint** constraints,
+		int numConstraints,
+		const btContactSolverInfo& infoGlobal,
+		btIDebugDraw* debugDrawer);
 	virtual btScalar solveGroupSolverSpecificInit(
-		btAlignedObjectArray<btSolverBody>* solverBodyPool,
-		btConstraintArray& solverContactConstraintPool,
-		btConstraintArray& solverNonContactConstraintPool,
-		btConstraintArray& solverContactFrictionConstraintPool,
-		btConstraintArray& solverContactRollingFrictionConstraintPool,
+		const btAlignedObjectArray<btSolverBody>* solverBodyPool,
+		const btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+		const btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+		const btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+		const btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
 		const btContactSolverInfo& infoGlobal,
 		btIDebugDraw* debugDrawer);
 

@@ -16,9 +16,8 @@ subject to the following restrictions:
 #ifndef BT_MULTIBODY_BLOCK_CONSTRAINT_SOLVER_H
 #define BT_MULTIBODY_BLOCK_CONSTRAINT_SOLVER_H
 
-#include "btMultiBodyConstraintSolver.h"
-
 #include "LinearMath/btThreads.h"
+#include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
 
 struct btBlockConstraintSolverConfig
 {
@@ -32,66 +31,121 @@ struct btConstraintBlock
 {
 	/// \{ \name Rigid Body Data
 
-	btCollisionObject** m_bodies;
-	int m_numBodies;
-	btPersistentManifold** m_manifold;
-	int m_numManifolds;
+	/// Rigid body (joint) constraints. This is shared by all the blocks.
 	btTypedConstraint** m_constraints;
+
+	/// Number of rigid body (joint) constraints. This is shared by all the
+	/// blocks.
 	int m_numConstraints;
-	btMultiBodyConstraint** m_multiBodyConstraints;
-	int m_numMultiBodyConstraints;
 
-	/// Pointer to the block constraint solver's body pool, which will be shared
-	/// by all the constraint blocks.
-	btAlignedObjectArray<btSolverBody>* m_tmpSolverBodyPool;
+	/// Pointer to the block constraint solver's body pool, which is shared by
+	/// all the constraint blocks.
+	btAlignedObjectArray<btSolverBody>* m_solverBodyPool;
 
-	btConstraintArray m_tmpSolverContactConstraintPool;
-	btConstraintArray m_tmpSolverNonContactConstraintPool;
-	btConstraintArray m_tmpSolverContactFrictionConstraintPool;
-	btConstraintArray m_tmpSolverContactRollingFrictionConstraintPool;
+	/// Array of non-contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_nonContactConstraints;
+
+	/// Array of normal contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_normalContactConstraints;
+
+	/// Array of friction contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_frictionContactConstraints;
+
+	/// Array of rolling friction contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_rollingFrictionContactConstraints;
 
 	/// \}
 
 	/// \{ \name Multibody Data
 
-	btMultiBodyConstraintArray m_multiBodyNonContactConstraints;
+	/// Multibody (joint) constraints. This is shared by all the blocks.
+	btMultiBodyConstraint** m_multiBodyConstraints;
 
-	btMultiBodyConstraintArray m_multiBodyNormalContactConstraints;
-	btMultiBodyConstraintArray m_multiBodyFrictionContactConstraints;
-	btMultiBodyConstraintArray m_multiBodyTorsionalFrictionContactConstraints;
-	// TODO(JS): Change the array names to be more consistent for both of rigid body and multibody
+	/// Number of multibody (joint) constraints. This is shared by all the
+	/// blocks.
+	int m_numMultiBodyConstraints;
+
+	/// Array of multibody non-contact constraints
+	btAlignedObjectArray<btMultiBodySolverConstraint*> m_multiBodyNonContactConstraints;
+
+	/// Array of multibody normal contact constraints
+	btAlignedObjectArray<btMultiBodySolverConstraint*> m_multiBodyNormalContactConstraints;
+
+	/// Array of multibody friction contact constraints
+	btAlignedObjectArray<btMultiBodySolverConstraint*> m_multiBodyFrictionContactConstraints;
+
+	/// Array of multibody rolling friction contact constraints
+	btAlignedObjectArray<btMultiBodySolverConstraint*> m_multiBodyTorsionalFrictionContactConstraints;
 
 	/// Pointer to the block constraint solver's multi body Jacobian data, which
-	/// will be shared by all the constraint blocks.
+	/// is shared by all the constraint blocks.
 	btMultiBodyJacobianData* m_data;
-
-	btMultiBodyConstraint** m_tmpMultiBodyConstraints;
-	int m_tmpNumMultiBodyConstraints;
 
 	/// \}
 
+	/// Constraint solver
 	btMultiBodyConstraintSolver* m_solver;
 
+	/// Index to constraint solver configuration
 	int m_constraintConfigId;
 
+	/// Default constructor
 	btConstraintBlock();
+
+	/// Constructor
+	btConstraintBlock(
+		btTypedConstraint** m_constraints,
+		int m_numConstraints,
+		btAlignedObjectArray<btSolverBody>* m_solverBodyPool,
+		btAlignedObjectArray<btSolverConstraint*>& m_nonContactConstraints,
+		btAlignedObjectArray<btSolverConstraint*>& m_normalContactConstraints,
+		btAlignedObjectArray<btSolverConstraint*>& m_frictionContactConstraints,
+		btAlignedObjectArray<btSolverConstraint*>& m_rollingFrictionContactConstraints,
+		btMultiBodyConstraint** m_multiBodyConstraints,
+		int m_numMultiBodyConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyNonContactConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyNormalContactConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyFrictionContactConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyTorsionalFrictionContactConstraints,
+		btMultiBodyJacobianData* m_data);
 };
 
 class btBlockSplittingPolicy
 {
 protected:
+public:
+	/// Destructor
 	virtual ~btBlockSplittingPolicy();
 
-public:
 	/// Splits a set of constraints into multiple subsets.
 	///
 	/// \param[in] blockInput
 	/// \param[in] availableConfigs
-	/// \param[in,out] blocksOutput
+	/// \param[in,out] blocksOutput The splitted blocks. This function adds blocks without clearning the array
+	/// beforehand. Clearning the array is the caller's responsibility.
 	virtual void split(
 		const btConstraintBlock& blockInput,
 		const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs,
 		btAlignedObjectArray<btConstraintBlock>& blocksOutput) = 0;
+};
+
+class btNonSplittingPolicy : public btBlockSplittingPolicy
+{
+protected:
+	btMultiBodyConstraintSolver* m_solver;
+
+public:
+	/// Constructor
+	btNonSplittingPolicy(btMultiBodyConstraintSolver* solver);
+
+	/// Destructor
+	virtual ~btNonSplittingPolicy();
+
+	// Documentation inherited
+	void split(
+		const btConstraintBlock& blockInput,
+		const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs,
+		btAlignedObjectArray<btConstraintBlock>& blocksOutput) BT_OVERRIDE;
 };
 
 class btMultiBodyBlockConstraintSolver : public btMultiBodyConstraintSolver
@@ -140,7 +194,7 @@ protected:
 	///
 	/// \param[in] configIndex The configuration indext in the range of [0, numConfigs). Passing out of the range is an
 	/// undefined behavior.
-	virtual void removeConfig(int configIndex);  //in range 0..numConfigs
+	virtual void removeConfig(int configIndex);
 };
 
-#endif  //BT_MULTIBODY_BLOCK_CONSTRAINT_SOLVER_H
+#endif  // BT_MULTIBODY_BLOCK_CONSTRAINT_SOLVER_H

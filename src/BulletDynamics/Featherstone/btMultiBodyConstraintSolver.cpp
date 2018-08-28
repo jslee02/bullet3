@@ -24,6 +24,28 @@ subject to the following restrictions:
 
 #include "LinearMath/btQuickprof.h"
 
+btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraints(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+{
+	btScalar val = btSequentialImpulseConstraintSolver::solveGroupConvertConstraints(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+
+	for (int i = 0; i < m_tmpNumMultiBodyConstraints; ++i)
+	{
+		btMultiBodyConstraint* c = m_tmpMultiBodyConstraints[i];
+		m_data.m_solverBodyPool = &m_tmpSolverBodyPool;
+		m_data.m_fixedBodyId = m_fixedBodyId;
+
+		c->createConstraintRows(m_multiBodyNonContactConstraints, m_data, infoGlobal);
+	}
+
+	m_multiBodyNonContactConstraintPtrs.resize(m_multiBodyNonContactConstraints.size());
+	for (int i = 0; i < m_multiBodyNonContactConstraints.size(); ++i)
+	{
+		m_multiBodyNonContactConstraintPtrs[i] = &m_multiBodyNonContactConstraints[i];
+	}
+
+	return val;
+}
+
 btScalar btMultiBodyConstraintSolver::solveSingleIteration(int iteration, btCollisionObject** /*bodies*/, int /*numBodies*/, btPersistentManifold** /*manifoldPtr*/, int /*numManifolds*/, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
 {
 	return solveMultiBodySingleIterationNew(
@@ -31,17 +53,88 @@ btScalar btMultiBodyConstraintSolver::solveSingleIteration(int iteration, btColl
 		constraints,
 		numConstraints,
 		&m_tmpSolverBodyPool,
-		m_tmpSolverNonContactConstraintPool,
-		m_tmpSolverContactConstraintPool,
-		m_tmpSolverContactFrictionConstraintPool,
-		m_tmpSolverContactRollingFrictionConstraintPool,
+		m_tmpSolverNonContactConstraintPtrPool,
+		m_tmpSolverContactConstraintPtrPool,
+		m_tmpSolverContactFrictionConstraintPtrPool,
+		m_tmpSolverContactRollingFrictionConstraintPtrPool,
 		&m_data,
-		m_multiBodyNonContactConstraints,
-		m_multiBodyNormalContactConstraints,
-		m_multiBodyFrictionContactConstraints,
-		m_multiBodyTorsionalFrictionContactConstraints,
+		m_multiBodyNonContactConstraintPtrs,
+		m_multiBodyNormalContactConstraintPtrs,
+		m_multiBodyFrictionContactConstraintPtrs,
+		m_multiBodyTorsionalFrictionContactConstraintPtrs,
 		infoGlobal,
 		debugDrawer);
+}
+
+btScalar btMultiBodyConstraintSolver::solveMultiBodyGroupCacheFriendlyIterationsNew(
+	btTypedConstraint** constraints,
+	int numConstraints,
+	btAlignedObjectArray<btSolverBody>* solverBodyPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
+	btMultiBodyJacobianData* data,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyNonContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyNormalContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyFrictionContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyTorsionalFrictionContactConstraints,
+	const btContactSolverInfo& infoGlobal,
+	btIDebugDraw* debugDrawer)
+{
+	BT_PROFILE("solveMultiBodyGroupCacheFriendlyIterationsNew");
+
+	{
+		// TODO(JS): [Debug]
+		if (solverBodyPool->size() > 0)
+			int a = 10;
+
+		///this is a special step to resolve penetrations (just for contacts)
+		solveGroupCacheFriendlySplitImpulseIterationsNew(
+			constraints,
+			numConstraints,
+			solverBodyPool,
+			solverNonContactConstraintPool,
+			solverContactConstraintPool,
+			solverContactFrictionConstraintPool,
+			solverContactRollingFrictionConstraintPool,
+			infoGlobal,
+			debugDrawer);
+
+		int maxIterations = m_maxOverrideNumSolverIterations > infoGlobal.m_numIterations ? m_maxOverrideNumSolverIterations : infoGlobal.m_numIterations;
+
+		for (int iteration = 0 ; iteration< maxIterations ; iteration++)
+		//for (int iteration = maxIterations-1  ; iteration >= 0;iteration--)
+		{
+			m_leastSquaresResidual = solveMultiBodySingleIterationNew(
+				iteration,
+				constraints,
+				numConstraints,
+				solverBodyPool,
+				solverNonContactConstraintPool,
+				solverContactConstraintPool,
+				solverContactFrictionConstraintPool,
+				solverContactRollingFrictionConstraintPool,
+				data,
+				multiBodyNonContactConstraints,
+				multiBodyNormalContactConstraints,
+				multiBodyFrictionContactConstraints,
+				multiBodyTorsionalFrictionContactConstraints,
+				infoGlobal,
+				debugDrawer);
+
+			if (m_leastSquaresResidual <= infoGlobal.m_leastSquaresResidualThreshold || (iteration>= (maxIterations-1)))
+			{
+#ifdef VERBOSE_RESIDUAL_PRINTF
+						printf("residual = %f at iteration #%d\n",m_leastSquaresResidual,iteration);
+#endif
+				break;
+			}
+		}
+
+	}
+
+	return m_leastSquaresResidual;
 }
 
 btScalar btMultiBodyConstraintSolver::solveMultiBodySingleIterationNew(
@@ -49,15 +142,15 @@ btScalar btMultiBodyConstraintSolver::solveMultiBodySingleIterationNew(
 	btTypedConstraint** constraints,
 	int numConstraints,
 	btAlignedObjectArray<btSolverBody>* solverBodyPool,
-	btConstraintArray& solverNonContactConstraintPool,
-	btConstraintArray& solverContactConstraintPool,
-	btConstraintArray& solverContactFrictionConstraintPool,
-	btConstraintArray& solverContactRollingFrictionConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
 	btMultiBodyJacobianData* data,
-	btMultiBodyConstraintArray& multiBodyNonContactConstraints,
-	btMultiBodyConstraintArray& multiBodyNormalContactConstraints,
-	btMultiBodyConstraintArray& multiBodyFrictionContactConstraints,
-	btMultiBodyConstraintArray& multiBodyTorsionalFrictionContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyNonContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyNormalContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& /*multiBodyFrictionContactConstraints*/,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& /*multiBodyTorsionalFrictionContactConstraints*/,
 	const btContactSolverInfo& infoGlobal,
 	btIDebugDraw* debugDrawer)
 {
@@ -81,7 +174,7 @@ btScalar btMultiBodyConstraintSolver::solveMultiBodySingleIterationNew(
 	{
 		int index = iteration & 1 ? j : multiBodyNonContactConstraints.size() - 1 - j;
 
-		btMultiBodySolverConstraint& constraint = multiBodyNonContactConstraints[index];
+		btMultiBodySolverConstraint& constraint = *multiBodyNonContactConstraints[index];
 
 		btScalar residual = resolveSingleConstraintRowGeneric(constraint);
 		leastSquaredResidual = btMax(leastSquaredResidual, residual * residual);
@@ -97,12 +190,12 @@ btScalar btMultiBodyConstraintSolver::solveMultiBodySingleIterationNew(
 	{
 		int index = j0;  //iteration&1? j0 : m_multiBodyNormalContactConstraints.size()-1-j0;
 
-		btMultiBodySolverConstraint& constraint = multiBodyNormalContactConstraints[index];
+		btMultiBodySolverConstraint& constraint = *multiBodyNormalContactConstraints[index];
 		btScalar residual = 0.f;
 
 		if (iteration < infoGlobal.m_numIterations)
 		{
-			residual = resolveSingleConstraintRowGeneric(constraint);
+			residual = resolveSingleConstraintRowGenericNew(solverBodyPool, *data, constraint);
 		}
 
 		leastSquaredResidual = btMax(leastSquaredResidual, residual * residual);
@@ -229,15 +322,24 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(btCollisionOb
 	return val;
 }
 
-void	btMultiBodyConstraintSolver::applyDeltaVee(btScalar* delta_vee, btScalar impulse, int velocityIndex, int ndof)
+void btMultiBodyConstraintSolver::applyDeltaVee(btScalar* delta_vee, btScalar impulse, int velocityIndex, int ndof)
+{
+	applyDeltaVeeNew(m_data, delta_vee, impulse, velocityIndex, ndof);
+}
+
+void btMultiBodyConstraintSolver::applyDeltaVeeNew(btMultiBodyJacobianData& data, btScalar* delta_vee, btScalar impulse, int velocityIndex, int ndof)
 {
     for (int i = 0; i < ndof; ++i) 
-		m_data.m_deltaVelocities[velocityIndex+i] += delta_vee[i] * impulse;
+		data.m_deltaVelocities[velocityIndex+i] += delta_vee[i] * impulse;
 }
 
 btScalar btMultiBodyConstraintSolver::resolveSingleConstraintRowGeneric(const btMultiBodySolverConstraint& c)
 {
+	return resolveSingleConstraintRowGenericNew(&m_tmpSolverBodyPool, m_data, c);
+}
 
+btScalar btMultiBodyConstraintSolver::resolveSingleConstraintRowGenericNew(btAlignedObjectArray<btSolverBody>* solverBodyPool, btMultiBodyJacobianData& data, const btMultiBodySolverConstraint& c)
+{
 	btScalar deltaImpulse = c.m_rhs - btScalar(c.m_appliedImpulse)*c.m_cfm;
 	btScalar deltaVelADotn = 0;
 	btScalar deltaVelBDotn = 0;
@@ -250,11 +352,11 @@ btScalar btMultiBodyConstraintSolver::resolveSingleConstraintRowGeneric(const bt
 	{
 		ndofA = c.m_multiBodyA->getNumDofs() + 6;
 		for (int i = 0; i < ndofA; ++i)
-			deltaVelADotn += m_data.m_jacobians[c.m_jacAindex + i] * m_data.m_deltaVelocities[c.m_deltaVelAindex + i];
+			deltaVelADotn += data.m_jacobians[c.m_jacAindex + i] * data.m_deltaVelocities[c.m_deltaVelAindex + i];
 	}
 	else if (c.m_solverBodyIdA >= 0)
 	{
-		bodyA = &m_tmpSolverBodyPool[c.m_solverBodyIdA];
+		bodyA = &(*solverBodyPool)[c.m_solverBodyIdA];
 		deltaVelADotn += c.m_contactNormal1.dot(bodyA->internalGetDeltaLinearVelocity()) + c.m_relpos1CrossNormal.dot(bodyA->internalGetDeltaAngularVelocity());
 	}
 
@@ -262,11 +364,11 @@ btScalar btMultiBodyConstraintSolver::resolveSingleConstraintRowGeneric(const bt
 	{
 		ndofB = c.m_multiBodyB->getNumDofs() + 6;
 		for (int i = 0; i < ndofB; ++i)
-			deltaVelBDotn += m_data.m_jacobians[c.m_jacBindex + i] * m_data.m_deltaVelocities[c.m_deltaVelBindex + i];
+			deltaVelBDotn += data.m_jacobians[c.m_jacBindex + i] * data.m_deltaVelocities[c.m_deltaVelBindex + i];
 	}
 	else if (c.m_solverBodyIdB >= 0)
 	{
-		bodyB = &m_tmpSolverBodyPool[c.m_solverBodyIdB];
+		bodyB = &(*solverBodyPool)[c.m_solverBodyIdB];
 		deltaVelBDotn += c.m_contactNormal2.dot(bodyB->internalGetDeltaLinearVelocity()) + c.m_relpos2CrossNormal.dot(bodyB->internalGetDeltaAngularVelocity());
 	}
 
@@ -292,11 +394,11 @@ btScalar btMultiBodyConstraintSolver::resolveSingleConstraintRowGeneric(const bt
 	
 	if (c.m_multiBodyA)
 	{
-		applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse, c.m_deltaVelAindex, ndofA);
+		applyDeltaVeeNew(data, &data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse, c.m_deltaVelAindex, ndofA);
 #ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
 		//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
 		//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
-		c.m_multiBodyA->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse);
+		c.m_multiBodyA->applyDeltaVeeMultiDof2(&data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse);
 #endif //DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
 	}
 	else if (c.m_solverBodyIdA >= 0)
@@ -306,11 +408,11 @@ btScalar btMultiBodyConstraintSolver::resolveSingleConstraintRowGeneric(const bt
 	}
 	if (c.m_multiBodyB)
 	{
-		applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse, c.m_deltaVelBindex, ndofB);
+		applyDeltaVeeNew(data, &data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse, c.m_deltaVelBindex, ndofB);
 #ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
 		//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
 		//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
-		c.m_multiBodyB->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse);
+		c.m_multiBodyB->applyDeltaVeeMultiDof2(&data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse);
 #endif //DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
 	}
 	else if (c.m_solverBodyIdB >= 0)
@@ -1410,6 +1512,24 @@ void	btMultiBodyConstraintSolver::convertMultiBodyContact(btPersistentManifold* 
 
 		}
 	}
+
+	m_multiBodyNormalContactConstraintPtrs.resize(m_multiBodyNormalContactConstraints.size());
+	for (int i = 0; i < m_multiBodyNormalContactConstraints.size(); ++i)
+	{
+		m_multiBodyNormalContactConstraintPtrs[i] = &m_multiBodyNormalContactConstraints[i];
+	}
+
+	m_multiBodyFrictionContactConstraintPtrs.resize(m_multiBodyFrictionContactConstraints.size());
+	for (int i = 0; i < m_multiBodyFrictionContactConstraints.size(); ++i)
+	{
+		m_multiBodyFrictionContactConstraintPtrs[i] = &m_multiBodyFrictionContactConstraints[i];
+	}
+
+	m_multiBodyTorsionalFrictionContactConstraintPtrs.resize(m_multiBodyTorsionalFrictionContactConstraints.size());
+	for (int i = 0; i < m_multiBodyTorsionalFrictionContactConstraints.size(); ++i)
+	{
+		m_multiBodyTorsionalFrictionContactConstraintPtrs[i] = &m_multiBodyTorsionalFrictionContactConstraints[i];
+	}
 }
 
 void btMultiBodyConstraintSolver::convertContacts(btPersistentManifold** manifoldPtr,int numManifolds, const btContactSolverInfo& infoGlobal)
@@ -1430,22 +1550,7 @@ void btMultiBodyConstraintSolver::convertContacts(btPersistentManifold** manifol
 			convertMultiBodyContact(manifold,infoGlobal);
 		}
 	}
-
-	//also convert the multibody constraints, if any
-
-	
-	for (int i=0;i<m_tmpNumMultiBodyConstraints;i++)
-	{
-		btMultiBodyConstraint* c = m_tmpMultiBodyConstraints[i];
-		m_data.m_solverBodyPool = &m_tmpSolverBodyPool;
-		m_data.m_fixedBodyId = m_fixedBodyId;
-		
-		c->createConstraintRows(m_multiBodyNonContactConstraints,m_data,	infoGlobal);
-	}
-
 }
-
-
 
 btScalar btMultiBodyConstraintSolver::solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher)
 {
@@ -1550,29 +1655,29 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 	BT_PROFILE("btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish");
 	return solveMultiBodyGroupCacheFriendlyFinishNew(
 		&m_tmpSolverBodyPool,
-		m_tmpSolverNonContactConstraintPool,
-		m_tmpSolverContactConstraintPool,
-		m_tmpSolverContactFrictionConstraintPool,
-		m_tmpSolverContactRollingFrictionConstraintPool,
+		m_tmpSolverNonContactConstraintPtrPool,
+		m_tmpSolverContactConstraintPtrPool,
+		m_tmpSolverContactFrictionConstraintPtrPool,
+		m_tmpSolverContactRollingFrictionConstraintPtrPool,
 		&m_data,
-		m_multiBodyNonContactConstraints,
-		m_multiBodyNormalContactConstraints,
-		m_multiBodyFrictionContactConstraints,
-		m_multiBodyTorsionalFrictionContactConstraints,
+		m_multiBodyNonContactConstraintPtrs,
+		m_multiBodyNormalContactConstraintPtrs,
+		m_multiBodyFrictionContactConstraintPtrs,
+		m_multiBodyTorsionalFrictionContactConstraintPtrs,
 		infoGlobal);
 }
 
 btScalar btMultiBodyConstraintSolver::solveMultiBodyGroupCacheFriendlyFinishNew(
 	btAlignedObjectArray<btSolverBody>* solverBodyPool,
-	btConstraintArray& solverNonContactConstraintPool,
-	btConstraintArray& solverContactConstraintPool,
-	btConstraintArray& solverContactFrictionConstraintPool,
-	btConstraintArray& solverContactRollingFrictionConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverNonContactConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactFrictionConstraintPool,
+	btAlignedObjectArray<btSolverConstraint*>& solverContactRollingFrictionConstraintPool,
 	btMultiBodyJacobianData* /*m_data*/,
-	btMultiBodyConstraintArray& multiBodyNonContactConstraints,
-	btMultiBodyConstraintArray& multiBodyNormalContactConstraints,
-	btMultiBodyConstraintArray& multiBodyFrictionContactConstraints,
-	btMultiBodyConstraintArray& /*multiBodyTorsionalFrictionContactConstraints*/,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyNonContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyNormalContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& multiBodyFrictionContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& /*multiBodyTorsionalFrictionContactConstraints*/,
 	const btContactSolverInfo& infoGlobal)
 {
 	BT_PROFILE("btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinishNew");
@@ -1582,20 +1687,20 @@ btScalar btMultiBodyConstraintSolver::solveMultiBodyGroupCacheFriendlyFinishNew(
 	//or as applied force, so we can measure the joint reaction forces easier
 	for (int i = 0; i < numPoolConstraints; i++)
 	{
-		btMultiBodySolverConstraint& solverConstraint = multiBodyNormalContactConstraints[i];
+		btMultiBodySolverConstraint& solverConstraint = *multiBodyNormalContactConstraints[i];
 		writeBackSolverBodyToMultiBody(solverConstraint, infoGlobal.m_timeStep);
 
-		writeBackSolverBodyToMultiBody(multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex], infoGlobal.m_timeStep);
+		writeBackSolverBodyToMultiBody(*multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex], infoGlobal.m_timeStep);
 
 		if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
 		{
-			writeBackSolverBodyToMultiBody(multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex + 1], infoGlobal.m_timeStep);
+			writeBackSolverBodyToMultiBody(*multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex + 1], infoGlobal.m_timeStep);
 		}
 	}
 
 	for (int i = 0; i < multiBodyNonContactConstraints.size(); i++)
 	{
-		btMultiBodySolverConstraint& solverConstraint = multiBodyNonContactConstraints[i];
+		btMultiBodySolverConstraint& solverConstraint = *multiBodyNonContactConstraints[i];
 		writeBackSolverBodyToMultiBody(solverConstraint, infoGlobal.m_timeStep);
 	}
 
@@ -1604,16 +1709,16 @@ btScalar btMultiBodyConstraintSolver::solveMultiBodyGroupCacheFriendlyFinishNew(
 		BT_PROFILE("warm starting write back");
 		for (int j = 0; j < numPoolConstraints; j++)
 		{
-			const btMultiBodySolverConstraint& solverConstraint = multiBodyNormalContactConstraints[j];
+			const btMultiBodySolverConstraint& solverConstraint = *multiBodyNormalContactConstraints[j];
 			btManifoldPoint* pt = (btManifoldPoint*)solverConstraint.m_originalContactPoint;
 			btAssert(pt);
 			pt->m_appliedImpulse = solverConstraint.m_appliedImpulse;
-			pt->m_appliedImpulseLateral1 = multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex].m_appliedImpulse;
+			pt->m_appliedImpulseLateral1 = multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex]->m_appliedImpulse;
 
 			//printf("pt->m_appliedImpulseLateral1 = %f\n", pt->m_appliedImpulseLateral1);
 			if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
 			{
-				pt->m_appliedImpulseLateral2 = multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex + 1].m_appliedImpulse;
+				pt->m_appliedImpulseLateral2 = multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex + 1]->m_appliedImpulse;
 			}
 			//do a callback here?
 		}
@@ -1732,7 +1837,28 @@ void btMultiBodyConstraintSolver::solveMultiBodyGroup(btCollisionObject** bodies
 	//printf("solveMultiBodyGroup start\n");
 	solveMultiBodyGroupPrestep(multiBodyConstraints, numMultiBodyConstraints, info, debugDrawer, dispatcher);
 
-	btSequentialImpulseConstraintSolver::solveGroup(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer, dispatcher);
+	{
+		//btSequentialImpulseConstraintSolver::solveGroup(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer, dispatcher);
+		solveGroupCacheFriendlySetup(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
+
+		solveMultiBodyGroupCacheFriendlyIterationsNew(
+			constraints,
+			numConstraints,
+			&m_tmpSolverBodyPool,
+			m_tmpSolverNonContactConstraintPtrPool,
+			m_tmpSolverContactConstraintPtrPool,
+			m_tmpSolverContactFrictionConstraintPtrPool,
+			m_tmpSolverContactRollingFrictionConstraintPtrPool,
+			&m_data,
+			m_multiBodyNonContactConstraintPtrs,
+			m_multiBodyNormalContactConstraintPtrs,
+			m_multiBodyFrictionContactConstraintPtrs,
+			m_multiBodyTorsionalFrictionContactConstraintPtrs,
+			info,
+			debugDrawer);
+
+		solveGroupCacheFriendlyFinish(bodies, numBodies, info);
+	}
 
 	solveMultiBodyGroupPoststep(multiBodyConstraints, numMultiBodyConstraints, info, debugDrawer, dispatcher);
 }
