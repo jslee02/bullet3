@@ -161,13 +161,23 @@ btScalar btMultiBodyConstraintSolver::solveSingleIteration(int iteration, btColl
 	return leastSquaredResidual;
 }
 
+btScalar btMultiBodyConstraintSolver::solveSingleIterationNew(int iteration, btCollisionObject** bodies ,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
+{
+	return solveSingleIteration(iteration, bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+}
+
 btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
+{
+	return btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup( bodies,numBodies,manifoldPtr, numManifolds, constraints,numConstraints,infoGlobal,debugDrawer);
+}
+
+btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraintPrestep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
 {
 	m_multiBodyNonContactConstraints.resize(0);
 	m_multiBodyNormalContactConstraints.resize(0);
 	m_multiBodyFrictionContactConstraints.resize(0);
 	m_multiBodyTorsionalFrictionContactConstraints.resize(0);
-	
+
 	m_data.m_jacobians.resize(0);
 	m_data.m_deltaVelocitiesUnitImpulse.resize(0);
 	m_data.m_deltaVelocities.resize(0);
@@ -181,7 +191,14 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(btCollisionOb
 		}
 	}
 
-	btScalar val = btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup( bodies,numBodies,manifoldPtr, numManifolds, constraints,numConstraints,infoGlobal,debugDrawer);
+	btScalar val = btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPrestep( bodies,numBodies,manifoldPtr, numManifolds, constraints,numConstraints,infoGlobal,debugDrawer);
+
+	return val;
+}
+
+btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraintPoststep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
+{
+	btScalar val = btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPoststep( bodies,numBodies,manifoldPtr, numManifolds, constraints,numConstraints,infoGlobal,debugDrawer);
 
 	return val;
 }
@@ -1402,7 +1419,16 @@ void btMultiBodyConstraintSolver::convertContacts(btPersistentManifold** manifol
 
 }
 
+void btMultiBodyConstraintSolver::setMultiBodyConstraints(const btMultiBodyConstraints& data)
+{
+	btSequentialImpulseConstraintSolver::setConstraints(data.m_rigidBodyConstraints);
 
+	m_multiBodyNonContactConstraints = data.m_multiBodyNonContactConstraints;
+	m_multiBodyNormalContactConstraints = data.m_multiBodyNormalContactConstraints;
+	m_multiBodyFrictionContactConstraints = data.m_multiBodyFrictionContactConstraints;
+	m_multiBodyTorsionalFrictionContactConstraints = data.m_multiBodyTorsionalFrictionContactConstraints;
+	m_data = *data.m_data;
+}
 
 btScalar btMultiBodyConstraintSolver::solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher)
 {

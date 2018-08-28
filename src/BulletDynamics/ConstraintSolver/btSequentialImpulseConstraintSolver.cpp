@@ -1515,21 +1515,31 @@ void btSequentialImpulseConstraintSolver::convertBodies(btCollisionObject** bodi
 	}
 }
 
-
 btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
 {
-	m_fixedBodyId = -1;
 	BT_PROFILE("solveGroupCacheFriendlySetup");
+
+	solveGroupConvertConstraintPrestep(bodies, numBodies, manifoldPtr, numManifolds,constraints, numConstraints, infoGlobal, debugDrawer);
+	solveGroupConvertConstraints(bodies, numBodies, manifoldPtr, numManifolds,constraints, numConstraints, infoGlobal, debugDrawer);
+	solveGroupConvertConstraintPoststep(bodies, numBodies, manifoldPtr, numManifolds,constraints, numConstraints, infoGlobal, debugDrawer);
+
+	return 0;
+}
+
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraints(btCollisionObject **bodies, int numBodies, btPersistentManifold **manifoldPtr, int numManifolds, btTypedConstraint **constraints, int numConstraints, const btContactSolverInfo &infoGlobal, btIDebugDraw *debugDrawer)
+{
+	m_fixedBodyId = -1;
+	BT_PROFILE("solveGroupConvertConstraints");
 	(void)debugDrawer;
 
-    // if solver mode has changed,
-    if ( infoGlobal.m_solverMode != m_cachedSolverMode )
-    {
-        // update solver functions to use SIMD or non-SIMD
-        bool useSimd = !!( infoGlobal.m_solverMode & SOLVER_SIMD );
-        setupSolverFunctions( useSimd );
-        m_cachedSolverMode = infoGlobal.m_solverMode;
-    }
+	// if solver mode has changed,
+	if ( infoGlobal.m_solverMode != m_cachedSolverMode )
+	{
+		// update solver functions to use SIMD or non-SIMD
+		bool useSimd = !!( infoGlobal.m_solverMode & SOLVER_SIMD );
+		setupSolverFunctions( useSimd );
+		m_cachedSolverMode = infoGlobal.m_solverMode;
+	}
 	m_maxOverrideNumSolverIterations = 0;
 
 #ifdef BT_ADDITIONAL_DEBUG
@@ -1568,50 +1578,58 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 			}
 		}
 	}
-    //make sure that dynamic bodies exist for all contact manifolds
-    for (int i=0;i<numManifolds;i++)
-    {
-        if (!manifoldPtr[i]->getBody0()->isStaticOrKinematicObject())
-        {
-            bool found=false;
-            for (int b=0;b<numBodies;b++)
-            {
+	//make sure that dynamic bodies exist for all contact manifolds
+	for (int i=0;i<numManifolds;i++)
+	{
+		if (!manifoldPtr[i]->getBody0()->isStaticOrKinematicObject())
+		{
+			bool found=false;
+			for (int b=0;b<numBodies;b++)
+			{
 
-                if (manifoldPtr[i]->getBody0()==bodies[b])
-                {
-                    found = true;
-                    break;
-                }
-            }
-            btAssert(found);
-        }
-        if (!manifoldPtr[i]->getBody1()->isStaticOrKinematicObject())
-        {
-            bool found=false;
-            for (int b=0;b<numBodies;b++)
-            {
-                if (manifoldPtr[i]->getBody1()==bodies[b])
-                {
-                    found = true;
-                    break;
-                }
-            }
-            btAssert(found);
-        }
-    }
+				if (manifoldPtr[i]->getBody0()==bodies[b])
+				{
+					found = true;
+					break;
+				}
+			}
+			btAssert(found);
+		}
+		if (!manifoldPtr[i]->getBody1()->isStaticOrKinematicObject())
+		{
+			bool found=false;
+			for (int b=0;b<numBodies;b++)
+			{
+				if (manifoldPtr[i]->getBody1()==bodies[b])
+				{
+					found = true;
+					break;
+				}
+			}
+			btAssert(found);
+		}
+	}
 #endif //BT_ADDITIONAL_DEBUG
 
 
 	//convert all bodies
-    convertBodies(bodies, numBodies, infoGlobal);
+	convertBodies(bodies, numBodies, infoGlobal);
 
-    convertJoints(constraints, numConstraints, infoGlobal);
+	convertJoints(constraints, numConstraints, infoGlobal);
 
 	convertContacts(manifoldPtr,numManifolds,infoGlobal);
 
+	return 0.f;
+}
 
-//	btContactSolverInfo info = infoGlobal;
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPrestep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
+{
+	return 0;
+}
 
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPoststep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
+{
+	//	btContactSolverInfo info = infoGlobal;
 
 	int numNonContactPool = m_tmpSolverNonContactConstraintPool.size();
 	int numConstraintPool = m_tmpSolverContactConstraintPool.size();
@@ -1642,9 +1660,7 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 	}
 
 	return 0.f;
-
 }
-
 
 btScalar btSequentialImpulseConstraintSolver::solveSingleIteration(int iteration, btCollisionObject** /*bodies */,int /*numBodies*/,btPersistentManifold** /*manifoldPtr*/, int /*numManifolds*/,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* /*debugDrawer*/)
 {
@@ -1883,7 +1899,7 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyIterations(
 		}
 
 	}
-	return 0.f;
+	return m_leastSquaresResidual;
 }
 
 void btSequentialImpulseConstraintSolver::writeBackContacts(int iBegin, int iEnd, const btContactSolverInfo& infoGlobal)
@@ -1980,7 +1996,14 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyFinish(btCo
 	return 0.f;
 }
 
-
+void btSequentialImpulseConstraintSolver::setConstraints(const btConstraints& data)
+{
+	m_tmpSolverBodyPool = *data.m_solverBodyPool;
+	m_tmpSolverNonContactConstraintPool = data.m_nonContactConstraints;
+	m_tmpSolverContactConstraintPool = data.m_normalContactConstraints;
+	m_tmpSolverContactFrictionConstraintPool = data.m_frictionContactConstraints;
+	m_tmpSolverContactRollingFrictionConstraintPool = data.m_rollingFrictionContactConstraints;
+}
 
 /// btSequentialImpulseConstraintSolver Sequentially applies impulses
 btScalar btSequentialImpulseConstraintSolver::solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer,btDispatcher* /*dispatcher*/)

@@ -133,17 +133,49 @@ protected:
 	virtual btScalar solveSingleIteration(int iteration, btCollisionObject** bodies ,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 
 	virtual btScalar solveGroupCacheFriendlySetup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
-	virtual btScalar solveGroupCacheFriendlyIterations(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 
 
 public:
+	struct btConstraints
+	{
+		/// Rigid body (joint) constraints. This is shared by all the blocks.
+		btTypedConstraint** m_constraints;
+
+		/// Number of rigid body (joint) constraints. This is shared by all the
+		/// blocks.
+		int m_numConstraints;
+
+		/// Pointer to the block constraint solver's body pool, which is shared by
+		/// all the constraint blocks.
+		btAlignedObjectArray<btSolverBody>* m_solverBodyPool;
+
+		/// Array of non-contact constraints
+		btAlignedObjectArray<btSolverConstraint> m_nonContactConstraints;
+
+		/// Array of normal contact constraints
+		btAlignedObjectArray<btSolverConstraint> m_normalContactConstraints;
+
+		/// Array of friction contact constraints
+		btAlignedObjectArray<btSolverConstraint> m_frictionContactConstraints;
+
+		/// Array of rolling friction contact constraints
+		btAlignedObjectArray<btSolverConstraint> m_rollingFrictionContactConstraints;
+	};
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 	btSequentialImpulseConstraintSolver();
 	virtual ~btSequentialImpulseConstraintSolver();
 
+	virtual void setConstraints(const btConstraints& data);
+
 	virtual btScalar solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher);
+
+	virtual btScalar solveGroupConvertConstraintPrestep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
+	virtual btScalar solveGroupConvertConstraints(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer);
+	virtual btScalar solveGroupConvertConstraintPoststep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
+
+		virtual btScalar solveGroupCacheFriendlyIterations(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 
 	///clear internal cached data and reset random seed
 	virtual	void	reset();
