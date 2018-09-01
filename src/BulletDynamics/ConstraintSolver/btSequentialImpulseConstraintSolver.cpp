@@ -1622,12 +1622,12 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraints(btCol
 	return 0.f;
 }
 
-btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPrestep(btCollisionObject** /*bodies*/,int /*numBodies*/,btPersistentManifold** /*manifoldPtr*/, int /*numManifolds*/,btTypedConstraint** /*constraints*/,int /*numConstraints*/,const btContactSolverInfo& /*infoGlobal*/,btIDebugDraw* /*debugDrawer*/)
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPrestep(btCollisionObject** /*bodies*/, int /*numBodies*/, btPersistentManifold** /*manifoldPtr*/, int /*numManifolds*/, btTypedConstraint** /*constraints*/, int /*numConstraints*/, const btContactSolverInfo& /*infoGlobal*/, btIDebugDraw* /*debugDrawer*/)
 {
 	return 0;
 }
 
-btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPoststep(btCollisionObject** /*bodies*/,int /*numBodies*/,btPersistentManifold** /*manifoldPtr*/, int /*numManifolds*/,btTypedConstraint** /*constraints*/,int /*numConstraints*/,const btContactSolverInfo& infoGlobal,btIDebugDraw* /*debugDrawer*/)
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPoststep(btCollisionObject** /*bodies*/,int /*numBodies*/, btPersistentManifold** /*manifoldPtr*/, int /*numManifolds*/, btTypedConstraint** /*constraints*/, int /*numConstraints*/, const btContactSolverInfo& infoGlobal, btIDebugDraw* /*debugDrawer*/)
 {
 	//	btContactSolverInfo info = infoGlobal;
 

@@ -27,34 +27,34 @@ btConstraintBlock::btConstraintBlock(
 	btTypedConstraint** m_constraints,
 	int m_numConstraints,
 	btAlignedObjectArray<btSolverBody>* m_solverBodyPool,
-	btAlignedObjectArray<btSolverConstraint*>& m_nonContactConstraints,
-	btAlignedObjectArray<btSolverConstraint*>& m_normalContactConstraints,
-	btAlignedObjectArray<btSolverConstraint*>& m_frictionContactConstraints,
-	btAlignedObjectArray<btSolverConstraint*>& m_rollingFrictionContactConstraints,
+	btConstraintArray& m_nonContactConstraints,
+	btConstraintArray& m_normalContactConstraints,
+	btConstraintArray& m_frictionContactConstraints,
+	btConstraintArray& m_rollingFrictionContactConstraints,
 	btMultiBodyConstraint** m_multiBodyConstraints,
 	int m_numMultiBodyConstraints,
-	btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyNonContactConstraints,
-	btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyNormalContactConstraints,
-	btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyFrictionContactConstraints,
-	btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyTorsionalFrictionContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyNonContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyNormalContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyFrictionContactConstraints,
+	btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyTorsionalFrictionContactConstraints,
 	btMultiBodyJacobianData* m_data)
 	: m_constraintConfigId(-1)
 {
 	// Do nothing
 }
 
-btNonSplittingPolicy::btNonSplittingPolicy(btMultiBodyConstraintSolver* solver)
+btSingleBlockSplittingPolicy::btSingleBlockSplittingPolicy(btMultiBodyConstraintSolver* solver)
 	: m_solver(solver)
 {
 	// Do nothing
 }
 
-btNonSplittingPolicy::~btNonSplittingPolicy()
+btSingleBlockSplittingPolicy::~btSingleBlockSplittingPolicy()
 {
 	// Do nothing
 }
 
-void btNonSplittingPolicy::split(const btConstraintBlock& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btConstraintBlock>& blocksOutput)
+void btSingleBlockSplittingPolicy::split(const btConstraintBlock& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btConstraintBlock>& blocksOutput)
 {
 	btConstraintBlock newBlock = blockInput;
 	newBlock.m_solver = m_solver;
@@ -64,6 +64,85 @@ void btNonSplittingPolicy::split(const btConstraintBlock& blockInput, const btAl
 	//	newBlock.m_numMultiBodyConstraints = blockInput.m_numMultiBodyConstraints;
 
 	blocksOutput.push_back(newBlock);
+}
+
+btDoubleBlockSplittingPolicy::btDoubleBlockSplittingPolicy(btMultiBodyConstraintSolver* solver)
+	: m_solver(solver)
+{
+	// Do nothing
+}
+
+btDoubleBlockSplittingPolicy::~btDoubleBlockSplittingPolicy()
+{
+	// Do nothing
+}
+
+template <typename ArrayT>
+void splitVector(const ArrayT& input, ArrayT& output1, ArrayT& output2)
+{
+	const int totalSize = input.size();
+	const int halfSize = totalSize / 2;
+
+	output1.resize(halfSize);
+	output2.resize(totalSize - halfSize);
+
+	for (int i = 0; i < halfSize; ++i)
+	{
+		output1[i] = input[i];
+	}
+
+	for (int i = halfSize; i < totalSize; ++i)
+	{
+		output2[i - halfSize] = input[i];
+	}
+}
+
+void btDoubleBlockSplittingPolicy::split(const btConstraintBlock& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btConstraintBlock>& blocksOutput)
+{
+	btConstraintBlock newBlock1 = blockInput;
+	btConstraintBlock newBlock2 = blockInput;
+
+	newBlock1.m_solver = m_solver;
+	newBlock2.m_solver = m_solver;
+
+//	splitVector(blockInput.m_normalContactConstraints, newBlock1.m_normalContactConstraints, newBlock2.m_normalContactConstraints);
+//	splitVector(blockInput.m_frictionContactConstraints, newBlock1.m_frictionContactConstraints, newBlock2.m_frictionContactConstraints);
+//	splitVector(blockInput.m_rollingFrictionContactConstraints, newBlock1.m_rollingFrictionContactConstraints, newBlock2.m_rollingFrictionContactConstraints);
+
+	splitVector(blockInput.m_multiBodyConstraintSet.m_multiBodyNormalContactConstraints, newBlock1.m_multiBodyConstraintSet.m_multiBodyNormalContactConstraints, newBlock2.m_multiBodyConstraintSet.m_multiBodyNormalContactConstraints);
+	splitVector(blockInput.m_multiBodyConstraintSet.m_multiBodyFrictionContactConstraints, newBlock1.m_multiBodyConstraintSet.m_multiBodyFrictionContactConstraints, newBlock2.m_multiBodyConstraintSet.m_multiBodyFrictionContactConstraints);
+	splitVector(blockInput.m_multiBodyConstraintSet.m_multiBodyTorsionalFrictionContactConstraints, newBlock1.m_multiBodyConstraintSet.m_multiBodyTorsionalFrictionContactConstraints, newBlock2.m_multiBodyConstraintSet.m_multiBodyTorsionalFrictionContactConstraints);
+
+	//	newBlock.m_constraints = blockInput.m_constraints;
+	//	newBlock.m_numConstraints = blockInput.m_numConstraints;
+	//	newBlock.m_multiBodyConstraints = blockInput.m_multiBodyConstraints;
+	//	newBlock.m_numMultiBodyConstraints = blockInput.m_numMultiBodyConstraints;
+
+	blocksOutput.push_back(newBlock1);
+	blocksOutput.push_back(newBlock2);
+}
+
+static void updateMultiBodySolverConstraint(const btAlignedObjectArray<btMultiBodySolverConstraint>& src, int srcIndex, btAlignedObjectArray<btMultiBodySolverConstraint>& dest)
+{
+	const int destIndex = dest.size();
+
+	dest.push_back(src[srcIndex]);
+
+	if (src[srcIndex].m_frictionIndex != -1)
+		dest[destIndex].m_frictionIndex = destIndex;
+}
+
+void btBlockSplittingPolicy::copyContactConstraint(const btConstraintBlock& src, int srcIndex, btConstraintBlock& dest)
+{
+	src.m_multiBodyConstraintSet.m_multiBodyNormalContactConstraints[srcIndex];
+
+	const int destIndex = dest.m_multiBodyConstraintSet.m_multiBodyNormalContactConstraints.size();
+
+	src.m_multiBodyConstraintSet.m_data;
+
+	updateMultiBodySolverConstraint(src.m_multiBodyConstraintSet.m_multiBodyNormalContactConstraints, srcIndex, dest.m_multiBodyConstraintSet.m_multiBodyNormalContactConstraints);
+	updateMultiBodySolverConstraint(src.m_multiBodyConstraintSet.m_multiBodyFrictionContactConstraints, srcIndex, dest.m_multiBodyConstraintSet.m_multiBodyFrictionContactConstraints);
+	updateMultiBodySolverConstraint(src.m_multiBodyConstraintSet.m_multiBodyTorsionalFrictionContactConstraints, srcIndex, dest.m_multiBodyConstraintSet.m_multiBodyTorsionalFrictionContactConstraints);
 }
 
 btBlockSplittingPolicy::~btBlockSplittingPolicy()
@@ -102,20 +181,19 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 
 	// 2. Split constraints into constraint blocks
 	btConstraintBlock input;
-	input.m_constraints = constraints;
-	input.m_numConstraints = numConstraints;
-	input.m_solverBodyPool = &m_tmpSolverBodyPool;
-	input.m_nonContactConstraints = m_tmpSolverNonContactConstraintPool;
-	input.m_normalContactConstraints = m_tmpSolverContactConstraintPool;
-	input.m_frictionContactConstraints = m_tmpSolverContactFrictionConstraintPool;
-	input.m_rollingFrictionContactConstraints = m_tmpSolverContactRollingFrictionConstraintPool;
-	input.m_multiBodyConstraints = m_tmpMultiBodyConstraints;
-	input.m_numMultiBodyConstraints = m_tmpNumMultiBodyConstraints;
-	input.m_multiBodyNonContactConstraints = m_multiBodyNonContactConstraints;
-	input.m_multiBodyNormalContactConstraints = m_multiBodyNormalContactConstraints;
-	input.m_multiBodyFrictionContactConstraints = m_multiBodyFrictionContactConstraints;
-	input.m_multiBodyTorsionalFrictionContactConstraints = m_multiBodyTorsionalFrictionContactConstraints;
-	input.m_data = &m_data;
+//	input.m_constraints = constraints;
+//	input.m_numConstraints = numConstraints;
+//	input.m_solverBodyPool = &m_tmpSolverBodyPool;
+//	input.m_nonContactConstraints = m_tmpSolverNonContactConstraintPool;
+//	input.m_normalContactConstraints = m_tmpSolverContactConstraintPool;
+//	input.m_frictionContactConstraints = m_tmpSolverContactFrictionConstraintPool;
+//	input.m_rollingFrictionContactConstraints = m_tmpSolverContactRollingFrictionConstraintPool;
+//	input.m_multiBodyConstraints = m_tmpMultiBodyConstraints;
+//	input.m_numMultiBodyConstraints = m_tmpNumMultiBodyConstraints;
+//	input.m_multiBodyNonContactConstraints = m_multiBodyNonContactConstraints;
+//	input.m_multiBodyNormalContactConstraints = m_multiBodyNormalContactConstraints;
+//	input.m_multiBodyFrictionContactConstraints = m_multiBodyFrictionContactConstraints;
+//	input.m_multiBodyTorsionalFrictionContactConstraints = m_multiBodyTorsionalFrictionContactConstraints;
 
 	input.m_bodies = bodies;
 	input.m_numBodies = numBodies;
@@ -140,7 +218,8 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 
 	btAlignedObjectArray<btBlockConstraintSolverConfig> tmp;
 	// TODO(JS): This is just for test
-	m_splittingPolicy = new btNonSplittingPolicy(new btMultiBodyConstraintSolver());
+	//m_splittingPolicy = new btSingleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
+	m_splittingPolicy = new btDoubleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
 	btAssert(m_splittingPolicy);
 	m_blocks.resize(0);
 	m_splittingPolicy->split(input, tmp, m_blocks);
@@ -151,9 +230,9 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 		btConstraintBlock& block = m_blocks[i];
 		btMultiBodyConstraintSolver* solver = block.m_solver;
 		btAssert(solver);
-		solver->solveGroupConvertConstraintPrestep(block.m_bodies, block.m_numBodies, block.m_manifold, block.m_numManifolds, constraints, block.m_numConstraints, info, debugDrawer);
+		solver->solveGroupConvertConstraintPrestep(block.m_bodies, block.m_numBodies, block.m_manifold, block.m_numManifolds, constraints, block.m_multiBodyConstraintSet.m_rigidBodyConstraints.m_numConstraints, info, debugDrawer);
 		solver->setMultiBodyConstraints(block.m_multiBodyConstraintSet);
-		solver->solveGroupConvertConstraintPoststep(block.m_bodies, block.m_numBodies, block.m_manifold, block.m_numManifolds, constraints, block.m_numConstraints, info, debugDrawer);
+		solver->solveGroupConvertConstraintPoststep(block.m_bodies, block.m_numBodies, block.m_manifold, block.m_numManifolds, constraints, block.m_multiBodyConstraintSet.m_rigidBodyConstraints.m_numConstraints, info, debugDrawer);
 
 		// refine constraint blocks
 
@@ -184,7 +263,7 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 
 			// 2. Iterations: perform Gauss-Seidel iterations
 			// TODO(JS): Add split impulse
-			btScalar newSquaredResidual = solver->solveGroupCacheFriendlyIterations(block.m_bodies, block.m_numBodies, block.m_manifold, block.m_numManifolds, block.m_constraints, block.m_numConstraints, info, debugDrawer);
+			btScalar newSquaredResidual = solver->solveGroupCacheFriendlyIterations(block.m_bodies, block.m_numBodies, block.m_manifold, block.m_numManifolds, block.m_multiBodyConstraintSet.m_rigidBodyConstraints.m_constraints, block.m_multiBodyConstraintSet.m_rigidBodyConstraints.m_numConstraints, info, debugDrawer);
 
 			m_leastSquaresResidual = btMax(m_leastSquaresResidual, newSquaredResidual);
 		}

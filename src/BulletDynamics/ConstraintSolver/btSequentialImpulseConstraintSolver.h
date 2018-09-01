@@ -150,16 +150,16 @@ public:
 		btAlignedObjectArray<btSolverBody>* m_solverBodyPool;
 
 		/// Array of non-contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_nonContactConstraints;
+		btConstraintArray m_nonContactConstraints;
 
 		/// Array of normal contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_normalContactConstraints;
+		btConstraintArray m_normalContactConstraints;
 
 		/// Array of friction contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_frictionContactConstraints;
+		btConstraintArray m_frictionContactConstraints;
 
 		/// Array of rolling friction contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_rollingFrictionContactConstraints;
+		btConstraintArray m_rollingFrictionContactConstraints;
 	};
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
@@ -171,9 +171,9 @@ public:
 
 	virtual btScalar solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher);
 
-	virtual btScalar solveGroupConvertConstraintPrestep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
+	virtual btScalar solveGroupConvertConstraintPrestep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer);
 	virtual btScalar solveGroupConvertConstraints(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer);
-	virtual btScalar solveGroupConvertConstraintPoststep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
+	virtual btScalar solveGroupConvertConstraintPoststep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer);
 
 		virtual btScalar solveGroupCacheFriendlyIterations(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 

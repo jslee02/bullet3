@@ -171,7 +171,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(btCollisionOb
 	return btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup( bodies,numBodies,manifoldPtr, numManifolds, constraints,numConstraints,infoGlobal,debugDrawer);
 }
 
-btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraintPrestep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
+btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraintPrestep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
 {
 	m_multiBodyNonContactConstraints.resize(0);
 	m_multiBodyNormalContactConstraints.resize(0);
@@ -182,7 +182,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraintPrestep(btColli
 	m_data.m_deltaVelocitiesUnitImpulse.resize(0);
 	m_data.m_deltaVelocities.resize(0);
 
-	for (int i=0;i<numBodies;i++)
+	for (int i = 0; i < numBodies; ++i)
 	{
 		const btMultiBodyLinkCollider* fcA = btMultiBodyLinkCollider::upcast(bodies[i]);
 		if (fcA)
@@ -191,16 +191,14 @@ btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraintPrestep(btColli
 		}
 	}
 
-	btScalar val = btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPrestep( bodies,numBodies,manifoldPtr, numManifolds, constraints,numConstraints,infoGlobal,debugDrawer);
+	btScalar val = btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPrestep(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 
 	return val;
 }
 
 btScalar btMultiBodyConstraintSolver::solveGroupConvertConstraintPoststep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer)
 {
-	btScalar val = btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPoststep( bodies,numBodies,manifoldPtr, numManifolds, constraints,numConstraints,infoGlobal,debugDrawer);
-
-	return val;
+	return btSequentialImpulseConstraintSolver::solveGroupConvertConstraintPoststep(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 }
 
 void	btMultiBodyConstraintSolver::applyDeltaVee(btScalar* delta_vee, btScalar impulse, int velocityIndex, int ndof)

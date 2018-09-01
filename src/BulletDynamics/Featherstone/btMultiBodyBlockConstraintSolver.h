@@ -37,54 +37,50 @@ struct btConstraintBlock
 	/// \{ \name Rigid Body Data
 
 	/// Rigid body (joint) constraints. This is shared by all the blocks.
-	btTypedConstraint** m_constraints;
+//	btTypedConstraint** m_constraints;
 
 	/// Number of rigid body (joint) constraints. This is shared by all the
 	/// blocks.
-	int m_numConstraints;
+//	int m_numConstraints;
 
 	/// Pointer to the block constraint solver's body pool, which is shared by
 	/// all the constraint blocks.
-	btAlignedObjectArray<btSolverBody>* m_solverBodyPool;
+//	btAlignedObjectArray<btSolverBody>* m_solverBodyPool;
 
 	/// Array of non-contact constraints
-	btAlignedObjectArray<btSolverConstraint> m_nonContactConstraints;
+//	btConstraintArray m_nonContactConstraints;
 
 	/// Array of normal contact constraints
-	btAlignedObjectArray<btSolverConstraint> m_normalContactConstraints;
+//	btConstraintArray m_normalContactConstraints;
 
 	/// Array of friction contact constraints
-	btAlignedObjectArray<btSolverConstraint> m_frictionContactConstraints;
+//	btConstraintArray m_frictionContactConstraints;
 
 	/// Array of rolling friction contact constraints
-	btAlignedObjectArray<btSolverConstraint> m_rollingFrictionContactConstraints;
+//	btConstraintArray m_rollingFrictionContactConstraints;
 
 	/// \}
 
 	/// \{ \name Multibody Data
 
 	/// Multibody (joint) constraints. This is shared by all the blocks.
-	btMultiBodyConstraint** m_multiBodyConstraints;
+//	btMultiBodyConstraint** m_multiBodyConstraints;
 
 	/// Number of multibody (joint) constraints. This is shared by all the
 	/// blocks.
-	int m_numMultiBodyConstraints;
+//	int m_numMultiBodyConstraints;
 
 	/// Array of multibody non-contact constraints
-	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNonContactConstraints;
+//	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNonContactConstraints;
 
 	/// Array of multibody normal contact constraints
-	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNormalContactConstraints;
+//	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNormalContactConstraints;
 
 	/// Array of multibody friction contact constraints
-	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyFrictionContactConstraints;
+//	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyFrictionContactConstraints;
 
 	/// Array of multibody rolling friction contact constraints
-	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyTorsionalFrictionContactConstraints;
-
-	/// Pointer to the block constraint solver's multi body Jacobian data, which
-	/// is shared by all the constraint blocks.
-	btMultiBodyJacobianData* m_data;
+//	btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyTorsionalFrictionContactConstraints;
 
 	/// \}
 
@@ -104,22 +100,24 @@ struct btConstraintBlock
 		btTypedConstraint** m_constraints,
 		int m_numConstraints,
 		btAlignedObjectArray<btSolverBody>* m_solverBodyPool,
-		btAlignedObjectArray<btSolverConstraint*>& m_nonContactConstraints,
-		btAlignedObjectArray<btSolverConstraint*>& m_normalContactConstraints,
-		btAlignedObjectArray<btSolverConstraint*>& m_frictionContactConstraints,
-		btAlignedObjectArray<btSolverConstraint*>& m_rollingFrictionContactConstraints,
+		btConstraintArray& m_nonContactConstraints,
+		btConstraintArray& m_normalContactConstraints,
+		btConstraintArray& m_frictionContactConstraints,
+		btConstraintArray& m_rollingFrictionContactConstraints,
 		btMultiBodyConstraint** m_multiBodyConstraints,
 		int m_numMultiBodyConstraints,
-		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyNonContactConstraints,
-		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyNormalContactConstraints,
-		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyFrictionContactConstraints,
-		btAlignedObjectArray<btMultiBodySolverConstraint*>& m_multiBodyTorsionalFrictionContactConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyNonContactConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyNormalContactConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyFrictionContactConstraints,
+		btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyTorsionalFrictionContactConstraints,
 		btMultiBodyJacobianData* m_data);
 };
 
 class btBlockSplittingPolicy
 {
 protected:
+	void copyContactConstraint(const btConstraintBlock& src, int index, btConstraintBlock& dest);
+
 public:
 	/// Destructor
 	virtual ~btBlockSplittingPolicy();
@@ -133,17 +131,33 @@ public:
 	virtual void split(const btConstraintBlock& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btConstraintBlock>& blocksOutput) = 0;
 };
 
-class btNonSplittingPolicy : public btBlockSplittingPolicy
+class btSingleBlockSplittingPolicy : public btBlockSplittingPolicy
 {
 protected:
 	btMultiBodyConstraintSolver* m_solver;
 
 public:
 	/// Constructor
-	btNonSplittingPolicy(btMultiBodyConstraintSolver* solver);
+	btSingleBlockSplittingPolicy(btMultiBodyConstraintSolver* solver);
 
 	/// Destructor
-	virtual ~btNonSplittingPolicy();
+	virtual ~btSingleBlockSplittingPolicy();
+
+	// Documentation inherited
+	virtual void split(const btConstraintBlock& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btConstraintBlock>& blocksOutput);
+};
+
+class btDoubleBlockSplittingPolicy : public btBlockSplittingPolicy
+{
+protected:
+	btMultiBodyConstraintSolver* m_solver;
+
+public:
+	/// Constructor
+	btDoubleBlockSplittingPolicy(btMultiBodyConstraintSolver* solver);
+
+	/// Destructor
+	virtual ~btDoubleBlockSplittingPolicy();
 
 	// Documentation inherited
 	virtual void split(const btConstraintBlock& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btConstraintBlock>& blocksOutput);
