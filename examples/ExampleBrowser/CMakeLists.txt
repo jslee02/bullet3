@@ -341,6 +341,10 @@ SET(BulletExampleBrowser_SRCS
   ../Constraints/ConstraintPhysicsSetup.h
   ../ConstraintSolvers/BoxStacks.cpp
   ../ConstraintSolvers/BoxStacks.h
+  ../ConstraintSolvers/BoxStacks_MLCP.cpp
+  ../ConstraintSolvers/BoxStacks_MLCP.h
+  ../ConstraintSolvers/Grasp_Block.cpp
+  ../ConstraintSolvers/Grasp_Block.h
   ../ConstraintSolvers/SerialChains.cpp
   ../ConstraintSolvers/SerialChains.h
 

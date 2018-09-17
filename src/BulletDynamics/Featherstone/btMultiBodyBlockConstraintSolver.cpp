@@ -18,6 +18,8 @@ subject to the following restrictions:
 #include <string.h>
 
 #include "LinearMath/btQuickprof.h"
+#include "btMultiBodyMLCPConstraintSolver.h"
+#include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 
 btMultiBodyConstraintBlock::btMultiBodyConstraintBlock()
 	: m_constraintConfigId(-1)
@@ -555,15 +557,15 @@ void btDoubleBlockSplittingPolicy::split(
 	const int totalRigidBodyContactConstraintSize = originalInternalData.m_rigidBodyData.m_normalContactConstraints.size();
 	const int halfRigidBodyContactConstraintSize = totalRigidBodyContactConstraintSize / 2;
 
-	for (int i = 0; i < totalRigidBodyContactConstraintSize; ++i)
+	for (int i = 0; i < halfRigidBodyContactConstraintSize; ++i)
 	{
 		copyRigidBodyContactConstraint(constraintBlock1, originalInternalData.m_rigidBodyData, i);
 	}
 
-//	for (int i = halfRigidBodyContactConstraintSize; i < totalRigidBodyContactConstraintSize; ++i)
-//	{
-//		copyRigidBodyContactConstraint(constraintBlock2, originalInternalData.m_rigidBodyData, i);
-//	}
+	for (int i = halfRigidBodyContactConstraintSize; i < totalRigidBodyContactConstraintSize; ++i)
+	{
+		copyRigidBodyContactConstraint(constraintBlock2, originalInternalData.m_rigidBodyData, i);
+	}
 
 	const int totalMultiBodyContactConstraintSize = originalInternalData.m_multiBodyNormalContactConstraints.size();
 	const int halfMultiBodyContactConstraintSize = totalMultiBodyContactConstraintSize / 2;
@@ -816,7 +818,11 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	btAlignedObjectArray<btBlockConstraintSolverConfig> configs;
 	// TODO(JS): This is just for test
 	//m_splittingPolicy = new btSingleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
-	m_splittingPolicy = new btDoubleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
+
+	btDantzigSolver* mlcp = new btDantzigSolver();
+	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+	m_splittingPolicy = new btDoubleBlockSplittingPolicy(sol);
+//	m_splittingPolicy = new btDoubleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
 	btAssert(m_splittingPolicy);
 	m_blocks.resize(0);
 	m_splittingPolicy->split(originalInternalDataCopy, configs, m_blocks);

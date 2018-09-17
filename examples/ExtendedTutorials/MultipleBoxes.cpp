@@ -22,6 +22,25 @@ subject to the following restrictions:
 #include "LinearMath/btAlignedObjectArray.h" 
 #include "../CommonInterfaces/CommonRigidBodyBase.h"
 
+#include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
+#include "BulletDynamics/Featherstone/btMultiBody.h"
+#include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyBlockConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyMLCPConstraintSolver.h"
+#include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
+#include "BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
+#include "BulletDynamics/Featherstone/btMultiBodyLink.h"
+#include "BulletDynamics/Featherstone/btMultiBodyJointLimitConstraint.h"
+#include "BulletDynamics/Featherstone/btMultiBodyJointMotor.h"
+#include "BulletDynamics/Featherstone/btMultiBodyPoint2Point.h"
+#include "BulletDynamics/Featherstone/btMultiBodyFixedConstraint.h"
+#include "BulletDynamics/Featherstone/btMultiBodySliderConstraint.h"
+
+#include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
+#include "BulletDynamics/MLCPSolvers/btLemkeSolver.h"
+#include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
+
+static int g_constraintSolverType = 0;
 const int TOTAL_BOXES = 10;
 struct MultipleBoxesExample : public CommonRigidBodyBase
 {
@@ -48,6 +67,44 @@ void MultipleBoxesExample::initPhysics()
 
 	createEmptyDynamicsWorld();
 	
+	if (g_constraintSolverType == 4)
+	{
+		g_constraintSolverType = 0;
+	}
+
+	btMultiBodyConstraintSolver* sol = new btMultiBodyBlockConstraintSolver();
+	btMLCPSolverInterface* mlcp;
+	switch (g_constraintSolverType++)
+	{
+		case 0:
+			sol = new btMultiBodyConstraintSolver;
+			b3Printf("Constraint Solver: Sequential Impulse");
+			break;
+		case 1:
+			mlcp = new btSolveProjectedGaussSeidel();
+			sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: MLCP + PGS");
+			break;
+		case 2:
+			mlcp = new btDantzigSolver();
+			sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: MLCP + Dantzig");
+			break;
+		default:
+			mlcp = new btLemkeSolver();
+			sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+			b3Printf("Constraint Solver: MLCP + Lemke");
+			break;
+	}
+	m_solver = sol;
+
+	btMultiBodyDynamicsWorld* world = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, sol, m_collisionConfiguration);
+	m_dynamicsWorld = world;
+
+	auto& info = m_dynamicsWorld->getSolverInfo();
+	info.m_globalCfm = 0.01;
+	info.m_numIterations = 35;
+
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
 
 	if (m_dynamicsWorld->getDebugDrawer())
@@ -65,6 +122,9 @@ void MultipleBoxesExample::initPhysics()
 		createRigidBody(mass,groundTransform,groundShape, btVector4(0,0,1,1));
 	}
 
+//	btScalar maxMass = 10000;
+	btScalar minMass = 0.1;
+	btScalar stepMass = 1.5;
 
 	{
 		//create a few dynamic rigidbodies
@@ -77,7 +137,7 @@ void MultipleBoxesExample::initPhysics()
 		btTransform startTransform;
 		startTransform.setIdentity();
 
-		btScalar	mass(1.f);
+		btScalar	mass = minMass;
 
 		//rigidbody is dynamic if and only if mass is non zero, otherwise static
 		bool isDynamic = (mass != 0.f);
@@ -87,12 +147,14 @@ void MultipleBoxesExample::initPhysics()
 			colShape->calculateLocalInertia(mass,localInertia);
 
 		
-		for(int i=0;i<TOTAL_BOXES;++i) {
+		for(int i=0;i<TOTAL_BOXES;++i)
+		{
 			startTransform.setOrigin(btVector3(
 									 btScalar(0),
-									 btScalar(20+i*2),
+									 btScalar(1+i*2),
 									 btScalar(0)));
 			createRigidBody(mass,startTransform,colShape);		 
+			mass *= stepMass;
 		}
 	}
 

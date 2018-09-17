@@ -173,6 +173,9 @@ void InclinedPlaneExample::initPhysics()
 	m_guiHelper->setUpAxis(1); // set Y axis as up axis
 
 	createEmptyDynamicsWorld();
+
+	auto& info = m_dynamicsWorld->getSolverInfo();
+	info.m_numIterations = 1;
 	
 	// create debug drawer
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
