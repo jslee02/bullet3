@@ -1992,17 +1992,91 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyFinish(btCo
 	m_tmpSolverContactFrictionConstraintPool.resizeNoInitialize(0);
 	m_tmpSolverContactRollingFrictionConstraintPool.resizeNoInitialize(0);
 
-	m_tmpSolverBodyPool.resizeNoInitialize(0);
+//	m_tmpSolverBodyPool.resizeNoInitialize(0);
 	return 0.f;
 }
 
-void btSequentialImpulseConstraintSolver::setConstraints(const btConstraints& data)
+static void copyConstraintToInternal(btConstraintArray& internalConstraints, const btAlignedObjectArray<btSolverConstraint>& externalConstraints, bool onlyDynamicData)
 {
-	m_tmpSolverBodyPool = *data.m_solverBodyPool;
-	m_tmpSolverNonContactConstraintPool = data.m_nonContactConstraints;
-	m_tmpSolverContactConstraintPool = data.m_normalContactConstraints;
-	m_tmpSolverContactFrictionConstraintPool = data.m_frictionContactConstraints;
-	m_tmpSolverContactRollingFrictionConstraintPool = data.m_rollingFrictionContactConstraints;
+	if (onlyDynamicData)
+	{
+		btAssert(internalConstraints.size() == externalConstraints.size());
+		for (int i = 0; i < externalConstraints.size(); ++i)
+		{
+			btSolverConstraint& destConstraint = internalConstraints[i];
+			const btSolverConstraint& srcConstraint = externalConstraints[i];
+
+			destConstraint.m_appliedImpulse = srcConstraint.m_appliedImpulse;
+			destConstraint.m_appliedPushImpulse = srcConstraint.m_appliedPushImpulse;
+		}
+		return;
+	}
+
+	internalConstraints.resize(externalConstraints.size());
+	for (int i = 0; i < externalConstraints.size(); ++i)
+	{
+		internalConstraints[i] = externalConstraints[i];
+	}
+}
+
+static void copyConstraintToExternal(btAlignedObjectArray<btSolverConstraint>& blockConstraints, btConstraintArray& internalConstraints, bool onlyDynamicData)
+{
+	if (onlyDynamicData)
+	{
+		btAssert(blockConstraints.size() == internalConstraints.size());
+		for (int i = 0; i < internalConstraints.size(); ++i)
+		{
+			btSolverConstraint& destConstraint = blockConstraints[i];
+			const btSolverConstraint& srcConstraint = internalConstraints[i];
+
+			destConstraint.m_appliedImpulse = srcConstraint.m_appliedImpulse;
+			destConstraint.m_appliedPushImpulse = srcConstraint.m_appliedPushImpulse;
+		}
+		return;
+	}
+
+	blockConstraints.resize(internalConstraints.size());
+	for (int i = 0; i < internalConstraints.size(); ++i)
+	{
+		blockConstraints[i] = internalConstraints[i];
+	}
+}
+
+void btSequentialImpulseConstraintSolver::setInternalConstraintData(const btInternalConstraintData& data, bool onlyDynamicData)
+{
+	if (onlyDynamicData)
+	{
+		// TODO(JS): Needs to pack/unpack
+		m_tmpSolverBodyPool = data.m_solverBodyPool;
+	}
+	else
+	{
+		m_tmpSolverBodyPool = data.m_solverBodyPool;
+	}
+
+	copyConstraintToInternal(m_tmpSolverNonContactConstraintPool, data.m_nonContactConstraints, onlyDynamicData);
+	copyConstraintToInternal(m_tmpSolverContactConstraintPool, data.m_normalContactConstraints, onlyDynamicData);
+	copyConstraintToInternal(m_tmpSolverContactFrictionConstraintPool, data.m_frictionContactConstraints, onlyDynamicData);
+	copyConstraintToInternal(m_tmpSolverContactRollingFrictionConstraintPool, data.m_rollingFrictionContactConstraints, onlyDynamicData);
+}
+
+void btSequentialImpulseConstraintSolver::getInternalConstraintData(btInternalConstraintData& data, bool onlyDynamicData)
+{
+	if (onlyDynamicData)
+	{
+		// TODO(JS): Needs to pack/unpack
+		data.m_solverBodyPool = m_tmpSolverBodyPool;
+	}
+	else
+	{
+		// TODO(JS): HERE !!!
+		data.m_solverBodyPool = m_tmpSolverBodyPool;
+	}
+
+	copyConstraintToExternal(data.m_nonContactConstraints, m_tmpSolverNonContactConstraintPool, onlyDynamicData);
+	copyConstraintToExternal(data.m_normalContactConstraints, m_tmpSolverContactConstraintPool, onlyDynamicData);
+	copyConstraintToExternal(data.m_frictionContactConstraints, m_tmpSolverContactFrictionConstraintPool, onlyDynamicData);
+	copyConstraintToExternal(data.m_rollingFrictionContactConstraints, m_tmpSolverContactRollingFrictionConstraintPool, onlyDynamicData);
 }
 
 /// btSequentialImpulseConstraintSolver Sequentially applies impulses

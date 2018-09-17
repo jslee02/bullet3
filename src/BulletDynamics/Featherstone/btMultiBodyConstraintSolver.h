@@ -87,9 +87,9 @@ protected:
 	void writeBackSolverBodyToMultiBody(btMultiBodySolverConstraint& constraint, btScalar deltaTime);
 public:
 
-	struct btMultiBodyConstraints
+	struct btMultiBodyInternalConstraintData
 	{
-		btSequentialImpulseConstraintSolver::btConstraints m_rigidBodyConstraints;
+		btSequentialImpulseConstraintSolver::btInternalConstraintData m_rigidBodyData;
 
 		/// Multibody (joint) constraints. This is shared by all the blocks.
 		btMultiBodyConstraint** m_multiBodyConstraints;
@@ -99,7 +99,7 @@ public:
 		int m_numMultiBodyConstraints;
 
 		/// Array of multibody non-contact constraints
-		btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNonContactConstraints;
+		btAlignedObjectArray<btMultiBodySolverConstraint> m_nonContactConstraints;
 
 		/// Array of multibody normal contact constraints
 		btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNormalContactConstraints;
@@ -112,12 +112,16 @@ public:
 
 		/// Pointer to the block constraint solver's multi body Jacobian data, which
 		/// is shared by all the constraint blocks.
-		btMultiBodyJacobianData* m_data;
+		btMultiBodyJacobianData m_data;
 	};
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
-	virtual void setMultiBodyConstraints(const btMultiBodyConstraints& data);
+	/// Copies internal constraint data from \p proxy
+	virtual void setMultiBodyInternalConstraintData(const btMultiBodyInternalConstraintData& proxy, bool onlyDynamicData = false);
+
+	/// Copies internal constraint data to \p proxy
+	virtual void getMultiBodyInternalConstraintData(btMultiBodyInternalConstraintData& data, bool onlyDynamicData = false);
 
 	///this method should not be called, it was just used during porting/integration of Featherstone btMultiBody, providing backwards compatibility but no support for btMultiBodyConstraint (only contact constraints)
 	virtual btScalar solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher);

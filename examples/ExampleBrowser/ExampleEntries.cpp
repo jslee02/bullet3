@@ -29,7 +29,8 @@
 #include "../MultiBody/MultiBodyConstraintFeedback.h"
 #include "../MultiBody/MultiDofDemo.h"
 #include "../MultiBody/InvertedPendulumPDControl.h"
-#include "../MultiBody/SerialChains.h"
+#include "../ConstraintSolvers/SerialChains.h"
+#include "../ConstraintSolvers/BoxStacks.h"
 #include "../RigidBody/RigidBodySoftContact.h"
 #include "../VoronoiFracture/VoronoiFractureDemo.h"
 #include "../SoftDemo/SoftDemo.h"
@@ -138,7 +139,10 @@ static ExampleEntry gDefaultExamples[]=
 	ExampleEntry(1,"Constraint Feedback", "The example shows how to receive joint reaction forces in a btMultiBody. Also the applied impulse is available for a btMultiBodyJointMotor", MultiBodyConstraintFeedbackCreateFunc),
 	ExampleEntry(1,"Inverted Pendulum PD","Keep an inverted pendulum up using open loop PD control", InvertedPendulumPDControlCreateFunc),
 	ExampleEntry(1,"MultiBody Soft Contact", "Using the error correction parameter (ERP) and constraint force mixing (CFM) values for contacts to simulate compliant contact.",MultiBodySoftContactCreateFunc,0),
+
+	ExampleEntry(0,"Constraint Solvers"),
 	ExampleEntry(1,"Serial Chains", "Show colliding two serial chains using different constraint solvers.", SerialChainsCreateFunc,0),
+	ExampleEntry(1,"Box Stack", "Show box stacks with different constraint solvers for each stack.", BoxStacksCreateFunc,0),
 
 	ExampleEntry(0,"Physics Client-Server"),
 	ExampleEntry(1,"Physics Server", "Create a physics server that communicates with a physics client over shared memory. You can connect to the server using pybullet, a PhysicsClient or a UDP/TCP Bridge.",

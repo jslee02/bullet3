@@ -1417,15 +1417,80 @@ void btMultiBodyConstraintSolver::convertContacts(btPersistentManifold** manifol
 
 }
 
-void btMultiBodyConstraintSolver::setMultiBodyConstraints(const btMultiBodyConstraints& data)
+static void copyConstraintsFromProxy(btAlignedObjectArray<btMultiBodySolverConstraint>& constraints, const btAlignedObjectArray<btMultiBodySolverConstraint>& constraintsProxy, bool onlyDynamicData)
 {
-	btSequentialImpulseConstraintSolver::setConstraints(data.m_rigidBodyConstraints);
+	if (onlyDynamicData)
+	{
+		btAssert(constraints.size() == constraintsProxy.size());
+		for (int i = 0; i < constraintsProxy.size(); ++i)
+		{
+			btMultiBodySolverConstraint& destConstraint = constraints[i];
+			const btMultiBodySolverConstraint& srcConstraint = constraintsProxy[i];
 
-	m_multiBodyNonContactConstraints = data.m_multiBodyNonContactConstraints;
-	m_multiBodyNormalContactConstraints = data.m_multiBodyNormalContactConstraints;
-	m_multiBodyFrictionContactConstraints = data.m_multiBodyFrictionContactConstraints;
-	m_multiBodyTorsionalFrictionContactConstraints = data.m_multiBodyTorsionalFrictionContactConstraints;
-	m_data = *data.m_data;
+			destConstraint.m_appliedImpulse = srcConstraint.m_appliedImpulse;
+			destConstraint.m_appliedPushImpulse = srcConstraint.m_appliedPushImpulse;
+		}
+		return;
+	}
+
+	constraints.resize(constraintsProxy.size());
+	for (int i = 0; i < constraintsProxy.size(); ++i)
+	{
+		constraints[i] = constraintsProxy[i];
+	}
+}
+
+static void copyConstraintsToProxy(btAlignedObjectArray<btMultiBodySolverConstraint>& constraintsProxy, btAlignedObjectArray<btMultiBodySolverConstraint>& constraints, bool onlyDynamicData)
+{
+	if (onlyDynamicData)
+	{
+		btAssert(constraintsProxy.size() == constraints.size());
+		for (int i = 0; i < constraints.size(); ++i)
+		{
+			btMultiBodySolverConstraint& destConstraint = constraintsProxy[i];
+			const btMultiBodySolverConstraint& srcConstraint = constraints[i];
+
+			destConstraint.m_appliedImpulse = srcConstraint.m_appliedImpulse;
+			destConstraint.m_appliedPushImpulse = srcConstraint.m_appliedPushImpulse;
+		}
+		return;
+	}
+
+	constraintsProxy.resize(constraints.size());
+	for (int i = 0; i < constraints.size(); ++i)
+	{
+		constraintsProxy[i] = constraints[i];
+	}
+}
+
+void btMultiBodyConstraintSolver::setMultiBodyInternalConstraintData(const btMultiBodyInternalConstraintData& data, bool onlyDynamicData)
+{
+	btSequentialImpulseConstraintSolver::setInternalConstraintData(data.m_rigidBodyData, onlyDynamicData);
+
+	copyConstraintsFromProxy(m_multiBodyNonContactConstraints, data.m_nonContactConstraints, onlyDynamicData);
+	copyConstraintsFromProxy(m_multiBodyNormalContactConstraints, data.m_multiBodyNormalContactConstraints, onlyDynamicData);
+	copyConstraintsFromProxy(m_multiBodyFrictionContactConstraints, data.m_multiBodyFrictionContactConstraints, onlyDynamicData);
+	copyConstraintsFromProxy(m_multiBodyTorsionalFrictionContactConstraints, data.m_multiBodyTorsionalFrictionContactConstraints, onlyDynamicData);
+
+	if (onlyDynamicData)
+		m_data.m_deltaVelocities = data.m_data.m_deltaVelocities;
+	else
+		m_data = data.m_data;
+}
+
+void btMultiBodyConstraintSolver::getMultiBodyInternalConstraintData(btMultiBodyInternalConstraintData& data, bool onlyDynamicData)
+{
+	copyConstraintsToProxy(data.m_nonContactConstraints, m_multiBodyNonContactConstraints, onlyDynamicData);
+	copyConstraintsToProxy(data.m_multiBodyNormalContactConstraints, m_multiBodyNormalContactConstraints, onlyDynamicData);
+	copyConstraintsToProxy(data.m_multiBodyFrictionContactConstraints, m_multiBodyFrictionContactConstraints, onlyDynamicData);
+	copyConstraintsToProxy(data.m_multiBodyTorsionalFrictionContactConstraints, m_multiBodyTorsionalFrictionContactConstraints, onlyDynamicData);
+
+	if (onlyDynamicData)
+		data.m_data.m_deltaVelocities = m_data.m_deltaVelocities;
+	else
+		data.m_data = m_data;
+
+	btSequentialImpulseConstraintSolver::getInternalConstraintData(data.m_rigidBodyData, onlyDynamicData);
 }
 
 btScalar btMultiBodyConstraintSolver::solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher)
