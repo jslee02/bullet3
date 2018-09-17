@@ -570,15 +570,15 @@ void btDoubleBlockSplittingPolicy::split(
 	const int totalMultiBodyContactConstraintSize = originalInternalData.m_multiBodyNormalContactConstraints.size();
 	const int halfMultiBodyContactConstraintSize = totalMultiBodyContactConstraintSize / 2;
 
-	for (int i = 0; i < halfMultiBodyContactConstraintSize; ++i)
+    for (int i = 0; i < halfMultiBodyContactConstraintSize; ++i)
 	{
 		copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
 	}
 
-	for (int i = halfMultiBodyContactConstraintSize; i < totalMultiBodyContactConstraintSize; ++i)
-	{
-		copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
-	}
+    for (int i = halfMultiBodyContactConstraintSize; i < totalMultiBodyContactConstraintSize; ++i)
+    {
+        copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
+    }
 
 	subBlocks.push_back(constraintBlock1);
 	subBlocks.push_back(constraintBlock2);
@@ -819,11 +819,13 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	// TODO(JS): This is just for test
 	//m_splittingPolicy = new btSingleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
 
-	btDantzigSolver* mlcp = new btDantzigSolver();
-	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-	m_splittingPolicy = new btDoubleBlockSplittingPolicy(sol);
-//	m_splittingPolicy = new btDoubleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
-	btAssert(m_splittingPolicy);
+//	btDantzigSolver* mlcp = new btDantzigSolver();
+//	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+//	m_splittingPolicy = new btDoubleBlockSplittingPolicy(sol);
+
+    m_splittingPolicy = new btDoubleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
+
+    btAssert(m_splittingPolicy);
 	m_blocks.resize(0);
 	m_splittingPolicy->split(originalInternalDataCopy, configs, m_blocks);
 
