@@ -21,6 +21,7 @@ subject to the following restrictions:
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btAlignedObjectArray.h" 
 #include "../CommonInterfaces/CommonRigidBodyBase.h"
+#include "../CommonInterfaces/CommonMultiBodyBase.h"
 
 #include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
 #include "BulletDynamics/Featherstone/btMultiBody.h"
@@ -44,10 +45,10 @@ static int g_constraintSolverType = 0;
 const int TOTAL_BOXES = 10;
 static int g_demo = 0;
 
-struct MultipleBoxesExample : public CommonRigidBodyBase
+struct MultipleBoxesExample : public CommonMultiBodyBase
 {
 	MultipleBoxesExample(struct GUIHelperInterface* helper)
-		:CommonRigidBodyBase(helper)
+		:CommonMultiBodyBase(helper)
 	{
 	}
 	virtual ~MultipleBoxesExample(){}
@@ -136,7 +137,7 @@ void MultipleBoxesExample::initPhysics()
 		g_constraintSolverType = 0;
 	}
 
-	g_demo = 0;
+	g_demo = 1;
 
     if (g_demo == 0)
     {
@@ -172,7 +173,7 @@ void MultipleBoxesExample::initPhysics()
 
         auto& info = m_dynamicsWorld->getSolverInfo();
         info.m_globalCfm = 0.01;
-        info.m_numIterations = 35;
+		info.m_numIterations = 10;
 
     }
 
@@ -211,7 +212,7 @@ void MultipleBoxesExample::initPhysics()
 
         auto& info = m_dynamicsWorld->getSolverInfo();
         info.m_globalCfm = 0.01;
-        info.m_numIterations = 35;
+		info.m_numIterations = 10;
     }
 
     m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
@@ -221,15 +222,19 @@ void MultipleBoxesExample::initPhysics()
 
 	///create a few basic rigid bodies
 	btBoxShape* groundShape = createBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
-	m_collisionShapes.push_back(groundShape);
+
+
+//	m_collisionShapes.push_back(groundShape);
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,-50,0)); 
-	{
-		btScalar mass(0.);
-		createRigidBody(mass,groundTransform,groundShape, btVector4(0,0,1,1));
-	}
+	groundTransform.setOrigin(btVector3(0,-50,0));
+//	{
+//		btScalar mass(0.);
+//		createRigidBody(mass,groundTransform,groundShape, btVector4(0,0,1,1));
+//	}
+
+	createMultiBody("name", 0.0, groundTransform, groundShape, btVector4(0, 0, 1, 1));
 
     if (g_demo == 0)
         makeScene1();
@@ -242,7 +247,7 @@ void MultipleBoxesExample::initPhysics()
 
 void MultipleBoxesExample::renderScene()
 {
-    CommonRigidBodyBase::renderScene();
+	CommonMultiBodyBase::renderScene();
 }
 
 void MultipleBoxesExample::makeScene1()
@@ -293,7 +298,7 @@ void MultipleBoxesExample::makeScene2(btMultiBodyDynamicsWorld* world)
 
     //	btScalar maxMass = 10000;
     btScalar minMass = 0.1;
-    btScalar stepMass = 1.5;
+	btScalar stepMass = 1.8;
 
     {
         //create a few dynamic rigidbodies

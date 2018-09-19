@@ -1465,8 +1465,6 @@ static void copyConstraintsToProxy(btAlignedObjectArray<btMultiBodySolverConstra
 
 void btMultiBodyConstraintSolver::setMultiBodyInternalConstraintData(const btMultiBodyInternalConstraintData& data, bool onlyDynamicData)
 {
-	btSequentialImpulseConstraintSolver::setInternalConstraintData(data.m_rigidBodyData, onlyDynamicData);
-
 	copyConstraintsFromProxy(m_multiBodyNonContactConstraints, data.m_nonContactConstraints, onlyDynamicData);
 	copyConstraintsFromProxy(m_multiBodyNormalContactConstraints, data.m_multiBodyNormalContactConstraints, onlyDynamicData);
 	copyConstraintsFromProxy(m_multiBodyFrictionContactConstraints, data.m_multiBodyFrictionContactConstraints, onlyDynamicData);
@@ -1489,8 +1487,6 @@ void btMultiBodyConstraintSolver::getMultiBodyInternalConstraintData(btMultiBody
 		data.m_data.m_deltaVelocities = m_data.m_deltaVelocities;
 	else
 		data.m_data = m_data;
-
-	btSequentialImpulseConstraintSolver::getInternalConstraintData(data.m_rigidBodyData, onlyDynamicData);
 }
 
 btScalar btMultiBodyConstraintSolver::solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher)

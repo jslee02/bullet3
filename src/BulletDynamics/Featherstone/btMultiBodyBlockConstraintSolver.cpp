@@ -21,6 +21,12 @@ subject to the following restrictions:
 #include "btMultiBodyMLCPConstraintSolver.h"
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 
+static void rigidBodyNotSupported()
+{
+	printf("Attempts to use rigid body for block solver, which is not supported yet.\n");
+	btAssert(false);
+}
+
 btMultiBodyConstraintBlock::btMultiBodyConstraintBlock()
 	: m_constraintConfigId(-1)
 {
@@ -89,8 +95,6 @@ void debugPrintDiff(const btScalar* dataA, const btScalar* dataB, int size, bool
 
 void btMultiBodyConstraintBlock::copyDynamicDataFromOriginalToBlock()
 {
-	copyRigidBodyDynamicDataFromOriginalToBlock();
-
 	copyConstraintDynamicDataToBlock(m_originalMultiBodyNormalContactConstraintPtrs, m_internalData.m_multiBodyNormalContactConstraints);
 	copyConstraintDynamicDataToBlock(m_originalMultiBodyFrictionContactConstraintPtrs, m_internalData.m_multiBodyFrictionContactConstraints);
 	copyConstraintDynamicDataToBlock(m_originalMultiBodyTorsionalFrictionContactConstraintPtrs, m_internalData.m_multiBodyTorsionalFrictionContactConstraints);
@@ -141,8 +145,6 @@ static void copyConstraintDynamicDataFromToOriginal(btAlignedObjectArray<btMulti
 
 void btMultiBodyConstraintBlock::copyDynamicDataFromBlockToOriginal()
 {
-	copyRigidBodyDynamicDataFromBlockToOriginal();
-
 	copyConstraintDynamicDataFromToOriginal(m_originalMultiBodyNormalContactConstraintPtrs, m_internalData.m_multiBodyNormalContactConstraints);
 	copyConstraintDynamicDataFromToOriginal(m_originalMultiBodyFrictionContactConstraintPtrs, m_internalData.m_multiBodyFrictionContactConstraints);
 	copyConstraintDynamicDataFromToOriginal(m_originalMultiBodyTorsionalFrictionContactConstraintPtrs, m_internalData.m_multiBodyTorsionalFrictionContactConstraints);
@@ -175,79 +177,6 @@ void btMultiBodyConstraintBlock::copyDynamicDataFromBlockToOriginal()
 		//		printf("\n");
 
 		memcpy(originalDeltaVelocitiesPtr, blockDeltaVelocitiesPtr, ndof * sizeof(btScalar));
-	}
-}
-
-static void copyConstraintDynamicDataToOriginal(btAlignedObjectArray<btSolverConstraint*>& originalConstraints, const btAlignedObjectArray<btSolverConstraint>& blockConstraints)
-{
-	btAssert(originalConstraints.size() == blockConstraints.size());
-	for (int i = 0; i < blockConstraints.size(); ++i)
-	{
-		btSolverConstraint& originalConstraint = *originalConstraints[i];
-		const btSolverConstraint& blockConstraint = blockConstraints[i];
-
-		originalConstraint.m_appliedImpulse = blockConstraint.m_appliedImpulse;
-		originalConstraint.m_appliedPushImpulse = blockConstraint.m_appliedPushImpulse;
-
-		// TODO(JS): m_frictionIndex
-
-//		originalConstraint.m_solverBodyIdA = 0;
-//		originalConstraint.m_solverBodyIdB = 0;
-	}
-}
-
-static void copyConstraintDynamicDataToBlock(btAlignedObjectArray<btSolverConstraint*>& originalConstraints, const btAlignedObjectArray<btSolverConstraint>& blockConstraints)
-{
-	btAssert(originalConstraints.size() == blockConstraints.size());
-	for (int i = 0; i < blockConstraints.size(); ++i)
-	{
-		btSolverConstraint& originalConstraint = *originalConstraints[i];
-		const btSolverConstraint& blockConstraint = blockConstraints[i];
-
-		blockConstraint.m_appliedImpulse = originalConstraint.m_appliedImpulse;
-		blockConstraint.m_appliedPushImpulse = originalConstraint.m_appliedPushImpulse;
-
-		// TODO(JS): m_frictionIndex
-	}
-}
-
-void btMultiBodyConstraintBlock::copyRigidBodyDynamicDataFromOriginalToBlock()
-{
-	auto& blockSolverBodyPool = m_internalData.m_rigidBodyData.m_solverBodyPool;
-	btAssert(m_originalRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(m_blockRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(m_originalSolverBodyIds.size() == blockSolverBodyPool.size());
-
-	copyConstraintDynamicDataToBlock(m_originalNonContactConstraintPtrs, m_internalData.m_rigidBodyData.m_nonContactConstraints);
-	copyConstraintDynamicDataToBlock(m_originalNormalContactConstraintPtrs, m_internalData.m_rigidBodyData.m_normalContactConstraints);
-	copyConstraintDynamicDataToBlock(m_originalFrictionContactConstraintPtrs, m_internalData.m_rigidBodyData.m_frictionContactConstraints);
-	copyConstraintDynamicDataToBlock(m_originalRollingFrictionContactConstraintPtrs, m_internalData.m_rigidBodyData.m_rollingFrictionContactConstraints);
-
-	for (int i = 0; i < blockSolverBodyPool.size(); ++i)
-	{
-		btAssert(blockSolverBodyPool.size() == m_blockRigidBodyCompanionIds.size());
-		if (blockSolverBodyPool[i].m_originalBody)
-			blockSolverBodyPool[i].m_originalBody->setCompanionId(m_blockRigidBodyCompanionIds[i]);
-	}
-}
-
-void btMultiBodyConstraintBlock::copyRigidBodyDynamicDataFromBlockToOriginal()
-{
-	auto& blockSolverBodyPool = m_internalData.m_rigidBodyData.m_solverBodyPool;
-	btAssert(m_originalRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(m_blockRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(m_originalSolverBodyIds.size() == blockSolverBodyPool.size());
-
-	copyConstraintDynamicDataToOriginal(m_originalNonContactConstraintPtrs, m_internalData.m_rigidBodyData.m_nonContactConstraints);
-	copyConstraintDynamicDataToOriginal(m_originalNormalContactConstraintPtrs, m_internalData.m_rigidBodyData.m_normalContactConstraints);
-	copyConstraintDynamicDataToOriginal(m_originalFrictionContactConstraintPtrs, m_internalData.m_rigidBodyData.m_frictionContactConstraints);
-	copyConstraintDynamicDataToOriginal(m_originalRollingFrictionContactConstraintPtrs, m_internalData.m_rigidBodyData.m_rollingFrictionContactConstraints);
-
-	for (int i = 0; i < blockSolverBodyPool.size(); ++i)
-	{
-		btAssert(blockSolverBodyPool.size() == m_blockRigidBodyCompanionIds.size());
-		if (blockSolverBodyPool[i].m_originalBody)
-			blockSolverBodyPool[i].m_originalBody->setCompanionId(m_originalRigidBodyCompanionIds[i]);
 	}
 }
 
@@ -346,54 +275,6 @@ static void setupBlockSolverBodyPool(
 //	btAssert(blockJacobians.size() >= blockDeltaVelocities.size());
 }
 
-static void setupRigidBodyBlockConstraintData(
-//	btAlignedObjectArray<btMultiBody*>& blockMultiBodySet,
-//	btAlignedObjectArray<int>& blockDeltaVelIndices,
-//	btMultiBodySolverConstraint& blockContactConstraint,
-//	btMultiBodyJacobianData& blockJacobianData,
-//	int blockFrictionIndex,
-//	btAlignedObjectArray<int>& originalDeltaVelIndices,
-//	const btMultiBodySolverConstraint& originalContactConstraint,
-//	const btMultiBodyJacobianData& originalJacobianData
-)
-{
-	// Copy all the values. Some values will be updated below if necessary.
-//	blockContactConstraint = originalContactConstraint;
-//	blockContactConstraint.m_frictionIndex = blockFrictionIndex;
-
-//	btMultiBody* multiBodyA = blockContactConstraint.m_multiBodyA;
-//	if (multiBodyA)
-//	{
-//		setupBlockMultiBodyJacobianData(
-//			multiBodyA,
-//			blockMultiBodySet,
-//			blockDeltaVelIndices,
-//			blockContactConstraint.m_deltaVelAindex,
-//			blockContactConstraint.m_jacAindex,
-//			blockJacobianData,
-//			originalDeltaVelIndices,
-//			originalContactConstraint.m_deltaVelAindex,
-//			originalContactConstraint.m_jacAindex,
-//			originalJacobianData);
-//	}
-
-//	btMultiBody* multiBodyB = blockContactConstraint.m_multiBodyB;
-//	if (multiBodyB)
-//	{
-//		setupBlockMultiBodyJacobianData(
-//			multiBodyB,
-//			blockMultiBodySet,
-//			blockDeltaVelIndices,
-//			blockContactConstraint.m_deltaVelBindex,
-//			blockContactConstraint.m_jacBindex,
-//			blockJacobianData,
-//			originalDeltaVelIndices,
-//			originalContactConstraint.m_deltaVelBindex,
-//			originalContactConstraint.m_jacBindex,
-//			originalJacobianData);
-//	}
-}
-
 template <typename ArrayT>
 void splitContactConstraints(const ArrayT& input, ArrayT& output1, ArrayT& output2)
 {
@@ -414,81 +295,11 @@ void splitContactConstraints(const ArrayT& input, ArrayT& output1, ArrayT& outpu
 	}
 }
 
-// TODO(JS): Change this function to manage companionID and solverID because
-// they can be different. companionID can be -1 when solverID isn't -1.
-static int convertOriginalSolverBodyIdToBlockSolverBodyId(
-	const int originalSolverBodyId,
-	btAlignedObjectArray<int>& blockSolverBodyIdToOriginals,
-	btAlignedObjectArray<int>& originalRigidBodyCompanionIds,
-	btAlignedObjectArray<int>& blockRigidBodyCompanionIds,
-	btAlignedObjectArray<btSolverBody>& blockSolverBodyPool,
-	btAlignedObjectArray<btSolverBody>& originalSolverBodyPool)
-{
-	btAssert(blockSolverBodyIdToOriginals.size() == blockSolverBodyPool.size());
-	if (originalSolverBodyId != -1)
-	{
-		for (int i = 0; i < blockSolverBodyIdToOriginals.size(); ++i)
-		{
-			if (originalSolverBodyId == blockSolverBodyIdToOriginals[i])
-			{
-//				btAssert(i == blo)
-				return i;
-			}
-		}
-
-		auto& originalSolverBody = originalSolverBodyPool[originalSolverBodyId];
-		const int blockSolverBodyId = blockSolverBodyIdToOriginals.size();
-
-		blockSolverBodyIdToOriginals.push_back(originalSolverBodyId);
-		blockSolverBodyPool.push_back(originalSolverBody);
-
-		btAssert(blockSolverBodyIdToOriginals.size() == blockSolverBodyPool.size());
-
-		auto* originalBody = originalSolverBody.m_originalBody;
-		if (originalBody)
-		{
-			const int originalSolverBodyCompanionId = originalBody->getCompanionId();
-			if (originalSolverBodyCompanionId != -1)
-			{
-				originalBody->setCompanionId(blockSolverBodyId);
-				originalRigidBodyCompanionIds.push_back(originalSolverBodyCompanionId);
-				blockRigidBodyCompanionIds.push_back(blockSolverBodyId);
-			}
-			else
-			{
-				originalRigidBodyCompanionIds.push_back(-1);
-				blockRigidBodyCompanionIds.push_back(-1);
-			}
-		}
-		else
-		{
-			originalRigidBodyCompanionIds.push_back(-2);
-			blockRigidBodyCompanionIds.push_back(-2);
-		}
-
-		return blockSolverBodyId;
-	}
-	else
-	{
-		// If you reached here, then it means the original constraint solver
-		// hasn't made a btSolverBody for the constraint. The child constraint
-		// solver will make the btSolverBody later.
-		return -1;
-	}
-}
-
 btMultiBodyConstraintBlock initializeConstraintBlock(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& input)
 {
 	btMultiBodyConstraintBlock output;
 
-	// RigidBody
-//	output.m_originalSolverBodyPool = &input.m_rigidBodyData.m_solverBodyPool;
-
 	// MultiBody
-
-	//	output.m_internalData.m_rigidBodyData.m_constraints = input.m_rigidBodyData.m_constraints;
-	//	output.m_internalData.m_rigidBodyData.m_numConstraints = input.m_rigidBodyData.m_numConstraints;
-//	output.m_internalData.m_rigidBodyData.m_solverBodyPool = input.m_rigidBodyData.m_solverBodyPool;
 
 	output.m_internalData.m_multiBodyConstraints = input.m_multiBodyConstraints;
 	output.m_internalData.m_numMultiBodyConstraints = input.m_numMultiBodyConstraints;
@@ -499,65 +310,6 @@ btMultiBodyConstraintBlock initializeConstraintBlock(btMultiBodyConstraintSolver
 
 	return output;
 }
-
-//static void setupRigidBodyBlockConstraintData(
-//	btAlignedObjectArray<btMultiBody*>& multiBodySet,
-//	btAlignedObjectArray<int>& blockDeltaVelIndices,
-//	int& blockDeltaVelIndex,
-//	int& blockJacobianIndex,
-//	btMultiBodyJacobianData& blockJacobianData,
-//	btAlignedObjectArray<int>& originalDeltaVelIndices,
-//	const int originalDeltaVelIndex,
-//	const int originalJacobianIndex,
-//	const btMultiBodyJacobianData& originalJacobianData)
-//{
-//	//	const int ndof = multiBody->getNumDofs() + 6;
-
-//	//	btAlignedObjectArray<btScalar>& blockJacobians = blockJacobianData.m_jacobians;
-//	//	btAlignedObjectArray<btScalar>& blockDeltaVelocities = blockJacobianData.m_deltaVelocities;
-//	//	btAlignedObjectArray<btScalar>& blockDeltaVelocitiesUnitImpulse = blockJacobianData.m_deltaVelocitiesUnitImpulse;
-
-//	//	const btAlignedObjectArray<btScalar>& originalJacobians = originalJacobianData.m_jacobians;
-//	//	const btAlignedObjectArray<btScalar>& originalDeltaVelocitiesUnitImpulse = originalJacobianData.m_deltaVelocitiesUnitImpulse;
-
-//	//	bool found = false;
-//	//	for (int i = 0; i < multiBodySet.size(); ++i)
-//	//	{
-//	//		if (multiBody == multiBodySet[i])
-//	//		{
-//	//			found = true;
-//	//			break;
-//	//		}
-//	//	}
-
-//	//	if (!found)
-//	//	{
-//	//		blockDeltaVelIndex = blockDeltaVelocities.size();
-//	//		blockDeltaVelocities.resize(blockDeltaVelocities.size() + ndof);
-//	//		multiBodySet.push_back(multiBody);
-//	//		originalDeltaVelIndices.push_back(originalDeltaVelIndex);
-//	//		blockDeltaVelIndices.push_back(blockDeltaVelIndex);
-//	//	}
-//	//	else
-//	//	{
-//	////		btAssert(blockDeltaVelocities.size() >= blockDeltaVelIndex + ndof);
-//	//	}
-
-//	//	blockJacobianIndex = blockJacobians.size();
-//	//	blockJacobians.resize(blockJacobians.size() + ndof);
-//	//	blockDeltaVelocitiesUnitImpulse.resize(blockDeltaVelocitiesUnitImpulse.size() + ndof);
-//	//	btAssert(blockJacobians.size() == blockDeltaVelocitiesUnitImpulse.size());
-
-//	//	btScalar* blockJacobiansRawPtr = &blockJacobians[blockJacobianIndex];
-//	//	const btScalar* originalJacobiansRawPtr = &originalJacobians[originalJacobianIndex];
-//	//	memcpy(blockJacobiansRawPtr, originalJacobiansRawPtr, ndof * sizeof(btScalar));
-
-//	//	btScalar* blockDeltaVelUnitImp = &blockDeltaVelocitiesUnitImpulse[blockJacobianIndex];
-//	//	const btScalar* originalDeltaVelUnitImp = &originalDeltaVelocitiesUnitImpulse[originalJacobianIndex];
-//	//	memcpy(blockDeltaVelUnitImp, originalDeltaVelUnitImp, ndof * sizeof(btScalar));
-
-//	//	btAssert(blockJacobians.size() >= blockDeltaVelocities.size());
-//}
 
 static void setupBlockMultiBodyJacobianData(
 	btMultiBody* multiBody,
@@ -619,27 +371,6 @@ static void setupBlockMultiBodyJacobianData(
 	btAssert(blockJacobians.size() >= blockDeltaVelocities.size());
 }
 
-static bool inspect(const btSequentialImpulseConstraintSolver::btInternalConstraintData& data)
-{
-	for (int i = 0; i < data.m_normalContactConstraints.size(); ++i)
-	{
-		auto& c = data.m_normalContactConstraints[i];
-		if (c.m_solverBodyIdA != -1 && c.m_solverBodyIdA >= data.m_solverBodyPool.size())
-		{
-			btAssert(false);
-			return false;
-		}
-
-		if (c.m_solverBodyIdB != -1 && c.m_solverBodyIdB >= data.m_solverBodyPool.size())
-		{
-			btAssert(false);
-			return false;
-		}
-	}
-
-	return true;
-}
-
 static void setupMultiBodyBlockConstraintData(
 	btMultiBodyConstraintBlock& block,
 	btAlignedObjectArray<btMultiBody*>& blockMultiBodySet,
@@ -673,13 +404,7 @@ static void setupMultiBodyBlockConstraintData(
 	}
 	else
 	{
-		blockContactConstraint.m_solverBodyIdA = convertOriginalSolverBodyIdToBlockSolverBodyId(
-			originalContactConstraint.m_solverBodyIdA,
-			block.m_originalSolverBodyIds,
-			block.m_originalRigidBodyCompanionIds,
-			block.m_blockRigidBodyCompanionIds,
-			block.m_internalData.m_rigidBodyData.m_solverBodyPool,
-			originalInternalData.m_rigidBodyData.m_solverBodyPool);
+		rigidBodyNotSupported();
 	}
 
 	btMultiBody* multiBodyB = blockContactConstraint.m_multiBodyB;
@@ -699,13 +424,7 @@ static void setupMultiBodyBlockConstraintData(
 	}
 	else
 	{
-		blockContactConstraint.m_solverBodyIdB = convertOriginalSolverBodyIdToBlockSolverBodyId(
-			originalContactConstraint.m_solverBodyIdB,
-			block.m_originalSolverBodyIds,
-			block.m_originalRigidBodyCompanionIds,
-			block.m_blockRigidBodyCompanionIds,
-			block.m_internalData.m_rigidBodyData.m_solverBodyPool,
-			originalInternalData.m_rigidBodyData.m_solverBodyPool);
+		rigidBodyNotSupported();
 	}
 }
 
@@ -718,127 +437,40 @@ void btDoubleBlockSplittingPolicy::split(
 	btMultiBodyConstraintBlock constraintBlock2 = initializeConstraintBlock(originalInternalData);
 
 	constraintBlock1.m_solver = m_solver;
-//	constraintBlock2.m_solver = m_solver;
+	constraintBlock2.m_solver = m_solver;
 
-	const int totalRigidBodyContactConstraintSize = originalInternalData.m_rigidBodyData.m_normalContactConstraints.size();
-	const int halfRigidBodyContactConstraintSize = totalRigidBodyContactConstraintSize / 2;
-
-	for (int i = 0; i < totalRigidBodyContactConstraintSize; ++i)
-	{
-		copyRigidBodyContactConstraint(constraintBlock1, originalInternalData.m_rigidBodyData, i);
-	}
-
-//	for (int i = 0; i < halfRigidBodyContactConstraintSize; ++i)
-//	{
-//		copyRigidBodyContactConstraint(constraintBlock1, originalInternalData.m_rigidBodyData, i);
-//	}
-
-//	for (int i = halfRigidBodyContactConstraintSize; i < totalRigidBodyContactConstraintSize; ++i)
-//	{
-//		copyRigidBodyContactConstraint(constraintBlock2, originalInternalData.m_rigidBodyData, i);
-//	}
+	btDantzigSolver* mlcp = new btDantzigSolver();
+	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+	constraintBlock2.m_solver = sol;
 
 	const int totalMultiBodyContactConstraintSize = originalInternalData.m_multiBodyNormalContactConstraints.size();
 	const int halfMultiBodyContactConstraintSize = totalMultiBodyContactConstraintSize / 2;
 
-    for (int i = 0; i < halfMultiBodyContactConstraintSize; ++i)
+//	for (int i = 0; i < halfMultiBodyContactConstraintSize; ++i)
+//	{
+//		copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
+//	}
+
+//	for (int i = halfMultiBodyContactConstraintSize; i < totalMultiBodyContactConstraintSize; ++i)
+//	{
+//		copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
+//	}
+
+	for (int i = 0; i < totalMultiBodyContactConstraintSize; ++i)
 	{
-		copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
+		if (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group1") == 0)
+			copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
+		else
+			copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
 	}
 
-    for (int i = halfMultiBodyContactConstraintSize; i < totalMultiBodyContactConstraintSize; ++i)
-    {
-        copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
-    }
-
 	subBlocks.push_back(constraintBlock1);
-//	subBlocks.push_back(constraintBlock2);
+	subBlocks.push_back(constraintBlock2);
 }
 
 btMultiBodyBlockSplittingPolicy::~btMultiBodyBlockSplittingPolicy()
 {
 	// Do nothing
-}
-
-void btMultiBodyBlockSplittingPolicy::copyRigidBodyContactConstraint(btMultiBodyConstraintBlock& block, btSequentialImpulseConstraintSolver::btInternalConstraintData& originalInternalData, int originalNormalContactConstraintIndex)
-{
-	btAlignedObjectArray<btSolverConstraint>& originalNormalContactConstraints = originalInternalData.m_normalContactConstraints;
-	btAlignedObjectArray<btSolverConstraint>& originalFrictionContactConstraints = originalInternalData.m_frictionContactConstraints;
-	btAlignedObjectArray<btSolverConstraint>& originalRollinglFrictionContactConstraints = originalInternalData.m_rollingFrictionContactConstraints;
-
-	btSequentialImpulseConstraintSolver::btInternalConstraintData& blockInternalData = block.m_internalData.m_rigidBodyData;
-	btAlignedObjectArray<btSolverConstraint>& blockNormalContactConstraints = blockInternalData.m_normalContactConstraints;
-	btAlignedObjectArray<btSolverConstraint>& blockFrictionContactConstraints = blockInternalData.m_frictionContactConstraints;
-	btAlignedObjectArray<btSolverConstraint>& blockTortionalFrictionContactConstraints = blockInternalData.m_rollingFrictionContactConstraints;
-
-	btAlignedObjectArray<btSolverConstraint*>& blockOriginalNormalContactConstraintPtrs = block.m_originalNormalContactConstraintPtrs;
-	btAlignedObjectArray<btSolverConstraint*>& blockOriginalFrictionContactConstraintPtrs = block.m_originalFrictionContactConstraintPtrs;
-	btAlignedObjectArray<btSolverConstraint*>& blockOriginalTorsionalFrictionContactConstraintPtrs = block.m_originalRollingFrictionContactConstraintPtrs;
-
-	const int numFrictionPerContact = originalNormalContactConstraints.size() == originalFrictionContactConstraints.size() ? 1 : 2;
-
-	//-- 1. Normal contact
-
-	btSolverConstraint& originalNormalContactConstraint = originalNormalContactConstraints[originalNormalContactConstraintIndex];
-
-	const int frictionIndex = blockNormalContactConstraints.size();
-
-	const int blockSolverBodyIdA = convertOriginalSolverBodyIdToBlockSolverBodyId(
-				originalNormalContactConstraint.m_solverBodyIdA,
-				block.m_originalSolverBodyIds,
-				block.m_originalRigidBodyCompanionIds,
-				block.m_blockRigidBodyCompanionIds,
-				block.m_internalData.m_rigidBodyData.m_solverBodyPool,
-				originalInternalData.m_solverBodyPool);
-	const int blockSolverBodyIdB = convertOriginalSolverBodyIdToBlockSolverBodyId(
-				originalNormalContactConstraint.m_solverBodyIdB,
-				block.m_originalSolverBodyIds,
-				block.m_originalRigidBodyCompanionIds,
-				block.m_blockRigidBodyCompanionIds,
-				block.m_internalData.m_rigidBodyData.m_solverBodyPool,
-				originalInternalData.m_solverBodyPool);
-
-	btSolverConstraint& blockNormalContactConstraint = blockNormalContactConstraints.expandNonInitializing();
-	blockOriginalNormalContactConstraintPtrs.push_back(&originalNormalContactConstraint);
-	blockNormalContactConstraint = originalNormalContactConstraint;
-	blockNormalContactConstraint.m_frictionIndex = frictionIndex;
-	blockNormalContactConstraint.m_solverBodyIdA = blockSolverBodyIdA;
-	blockNormalContactConstraint.m_solverBodyIdB = blockSolverBodyIdB;
-
-	// TODO(JS): Needs to update solver body id a/b in the new constraint
-
-	const int originalFrictionContactConstraintIndex1 = originalNormalContactConstraintIndex * numFrictionPerContact;
-	const int originalFrictionContactConstraintIndex2 = originalFrictionContactConstraintIndex1 + 1;
-
-	btSolverConstraint& originalFrictionContactConstraint = originalFrictionContactConstraints[originalFrictionContactConstraintIndex1];
-	btSolverConstraint& blockFrictionContactConstraint = blockFrictionContactConstraints.expandNonInitializing();
-	blockOriginalFrictionContactConstraintPtrs.push_back(&originalFrictionContactConstraint);
-	blockFrictionContactConstraint = originalFrictionContactConstraint;
-	blockFrictionContactConstraint.m_frictionIndex = frictionIndex;
-	blockFrictionContactConstraint.m_solverBodyIdA = blockSolverBodyIdA;
-	blockFrictionContactConstraint.m_solverBodyIdB = blockSolverBodyIdB;
-
-	if (numFrictionPerContact > 1)
-	{
-		btSolverConstraint& originalFrictionContactConstraint = originalFrictionContactConstraints[originalFrictionContactConstraintIndex2];
-		btSolverConstraint& blockFrictionContactConstraint = blockFrictionContactConstraints.expandNonInitializing();
-		blockOriginalFrictionContactConstraintPtrs.push_back(&originalFrictionContactConstraint);
-		blockFrictionContactConstraint = originalFrictionContactConstraint;
-		blockFrictionContactConstraint.m_frictionIndex = frictionIndex;
-		blockFrictionContactConstraint.m_solverBodyIdA = blockSolverBodyIdA;
-		blockFrictionContactConstraint.m_solverBodyIdB = blockSolverBodyIdB;
-	}
-
-	//
-
-//	setupSolverBodyPool(
-//		block.m_originalRigidBodyCompanionIds,
-//		block.m_internalData.m_rigidBodyData.m_solverBodyPool,
-//		originalInternalData.m_solverBodyPool,
-//		originalNormalContactConstraint);
-
-	btAssert(originalNormalContactConstraint.m_solverBodyIdA >= 0);
-	btAssert(originalNormalContactConstraint.m_solverBodyIdB >= 0);
 }
 
 void btMultiBodyBlockSplittingPolicy::copyMultiBodyContactConstraint(btMultiBodyConstraintBlock& block, btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& originalInternalData, int originalNormalContactConstraintIndex)
@@ -939,13 +571,6 @@ btMultiBodyBlockConstraintSolver::~btMultiBodyBlockConstraintSolver()
 
 btScalar btMultiBodyBlockConstraintSolver::solveGroupConvertConstraintPoststep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
 {
-	for (int j = 0; j < numConstraints; ++j)
-	{
-		// TODO(JS):
-//		getOrInitSolverBody(constraints[j]->getRigidBodyA(),infoGlobal.m_timeStep);
-//		getOrInitSolverBody(constraints[j]->getRigidBodyB(),infoGlobal.m_timeStep);
-	}
-
 	return btMultiBodyConstraintSolver::solveGroupConvertConstraintPoststep(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 }
 
@@ -970,9 +595,7 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 
 	// 2. Split constraints into constraint blocks
 	btMultiBodyInternalConstraintData originalInternalDataCopy;
-	inspect(originalInternalDataCopy.m_rigidBodyData);
 	getMultiBodyInternalConstraintData(originalInternalDataCopy);
-	inspect(originalInternalDataCopy.m_rigidBodyData);
 
 	btAlignedObjectArray<btBlockConstraintSolverConfig> configs;
 	// TODO(JS): This is just for test
@@ -1050,8 +673,6 @@ void btMultiBodyBlockConstraintSolver::setSplittingPolicy(btMultiBodyBlockSplitt
 
 void btMultiBodyBlockConstraintSolver::copyDynamicDataFromOriginalToBlock(btMultiBodyConstraintBlock& block)
 {
-	copyRigidBodyDynamicDataFromOriginalToBlock(block);
-
 	copyConstraintDynamicDataToBlock(block.m_originalMultiBodyNormalContactConstraintPtrs, block.m_internalData.m_multiBodyNormalContactConstraints);
 	copyConstraintDynamicDataToBlock(block.m_originalMultiBodyFrictionContactConstraintPtrs, block.m_internalData.m_multiBodyFrictionContactConstraints);
 	copyConstraintDynamicDataToBlock(block.m_originalMultiBodyTorsionalFrictionContactConstraintPtrs, block.m_internalData.m_multiBodyTorsionalFrictionContactConstraints);
@@ -1089,8 +710,6 @@ void btMultiBodyBlockConstraintSolver::copyDynamicDataFromOriginalToBlock(btMult
 
 void btMultiBodyBlockConstraintSolver::copyDynamicDataFromBlockToOriginal(btMultiBodyConstraintBlock& block)
 {
-	copyRigidBodyDynamicDataFromBlockToOriginal(block);
-
 	copyConstraintDynamicDataFromToOriginal(block.m_originalMultiBodyNormalContactConstraintPtrs, block.m_internalData.m_multiBodyNormalContactConstraints);
 	copyConstraintDynamicDataFromToOriginal(block.m_originalMultiBodyFrictionContactConstraintPtrs, block.m_internalData.m_multiBodyFrictionContactConstraints);
 	copyConstraintDynamicDataFromToOriginal(block.m_originalMultiBodyTorsionalFrictionContactConstraintPtrs, block.m_internalData.m_multiBodyTorsionalFrictionContactConstraints);
@@ -1123,68 +742,6 @@ void btMultiBodyBlockConstraintSolver::copyDynamicDataFromBlockToOriginal(btMult
 		//		printf("\n");
 
 		memcpy(originalDeltaVelocitiesPtr, blockDeltaVelocitiesPtr, ndof * sizeof(btScalar));
-	}
-}
-
-void btMultiBodyBlockConstraintSolver::copyRigidBodyDynamicDataFromOriginalToBlock(btMultiBodyConstraintBlock& block)
-{
-	auto& blockSolverBodyPool = block.m_internalData.m_rigidBodyData.m_solverBodyPool;
-	btAssert(block.m_originalRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(block.m_blockRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(block.m_originalSolverBodyIds.size() == blockSolverBodyPool.size());
-
-	copyConstraintDynamicDataToBlock(block.m_originalNonContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_nonContactConstraints);
-	copyConstraintDynamicDataToBlock(block.m_originalNormalContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_normalContactConstraints);
-	copyConstraintDynamicDataToBlock(block.m_originalFrictionContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_frictionContactConstraints);
-	copyConstraintDynamicDataToBlock(block.m_originalRollingFrictionContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_rollingFrictionContactConstraints);
-
-	for (int i = 0; i < blockSolverBodyPool.size(); ++i)
-	{
-		auto& blockSolverBody = blockSolverBodyPool[i];
-		auto& originalSolverBody = m_tmpSolverBodyPool[block.m_originalSolverBodyIds[i]];
-
-		blockSolverBody = originalSolverBody;
-
-		btAssert(blockSolverBodyPool.size() == block.m_blockRigidBodyCompanionIds.size());
-		if (blockSolverBodyPool[i].m_originalBody)
-		{
-			blockSolverBodyPool[i].m_originalBody->setCompanionId(block.m_blockRigidBodyCompanionIds[i]);
-		}
-		else
-		{
-			btAssert(block.m_blockRigidBodyCompanionIds[i] == -2);
-		}
-	}
-}
-
-void btMultiBodyBlockConstraintSolver::copyRigidBodyDynamicDataFromBlockToOriginal(btMultiBodyConstraintBlock& block)
-{
-	auto& blockSolverBodyPool = block.m_internalData.m_rigidBodyData.m_solverBodyPool;
-	btAssert(block.m_originalRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(block.m_blockRigidBodyCompanionIds.size() == blockSolverBodyPool.size());
-	btAssert(block.m_originalSolverBodyIds.size() == blockSolverBodyPool.size());
-
-	copyConstraintDynamicDataToOriginal(block.m_originalNonContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_nonContactConstraints);
-	copyConstraintDynamicDataToOriginal(block.m_originalNormalContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_normalContactConstraints);
-	copyConstraintDynamicDataToOriginal(block.m_originalFrictionContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_frictionContactConstraints);
-	copyConstraintDynamicDataToOriginal(block.m_originalRollingFrictionContactConstraintPtrs, block.m_internalData.m_rigidBodyData.m_rollingFrictionContactConstraints);
-
-	for (int i = 0; i < blockSolverBodyPool.size(); ++i)
-	{
-		auto& blockSolverBody = blockSolverBodyPool[i];
-		auto& originalSolverBody = m_tmpSolverBodyPool[block.m_originalSolverBodyIds[i]];
-
-		originalSolverBody = blockSolverBody;
-
-		btAssert(blockSolverBodyPool.size() == block.m_blockRigidBodyCompanionIds.size());
-		if (blockSolverBodyPool[i].m_originalBody)
-		{
-			blockSolverBodyPool[i].m_originalBody->setCompanionId(block.m_originalRigidBodyCompanionIds[i]);
-		}
-		else
-		{
-			btAssert(block.m_originalRigidBodyCompanionIds[i] == -2);
-		}
 	}
 }
 

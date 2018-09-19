@@ -136,44 +136,10 @@ protected:
 
 
 public:
-	struct btInternalConstraintData
-	{
-		/// Rigid body (joint) constraints. This is shared by all the blocks.
-//		btTypedConstraint** m_constraints;
-
-		/// Number of rigid body (joint) constraints. This is shared by all the
-		/// blocks.
-//		int m_numConstraints;
-
-		/// Pointer to the block constraint solver's body pool, which is shared by
-		/// all the constraint blocks.
-		btAlignedObjectArray<btSolverBody> m_solverBodyPool;
-
-		/// Array of non-contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_nonContactConstraints;
-
-		/// Array of normal contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_normalContactConstraints;
-
-		/// Array of friction contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_frictionContactConstraints;
-
-		/// Array of rolling friction contact constraints
-		btAlignedObjectArray<btSolverConstraint> m_rollingFrictionContactConstraints;
-
-		btAlignedObjectArray<int> m_orderTmpConstraintPool;
-		btAlignedObjectArray<int> m_orderNonContactConstraintPool;
-		btAlignedObjectArray<int> m_orderFrictionConstraintPool;
-		btAlignedObjectArray<btTypedConstraint::btConstraintInfo1> m_tmpConstraintSizesPool;
-	};
-
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 	btSequentialImpulseConstraintSolver();
 	virtual ~btSequentialImpulseConstraintSolver();
-
-	virtual void setInternalConstraintData(const btInternalConstraintData& data, bool onlyDynamicData = false);
-	virtual void getInternalConstraintData(btInternalConstraintData& data, bool onlyDynamicData = false);
 
 	virtual btScalar solveGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher);
 
