@@ -170,6 +170,10 @@ public:
 	/// Destructor
 	virtual ~btMultiBodyMLCPConstraintSolver();
 
+	btScalar solveGroupConvertConstraintPrestep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer) BT_OVERRIDE;
+	btScalar solveGroupConvertConstraints(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer) BT_OVERRIDE;
+	btScalar solveGroupConvertConstraintPoststep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer) BT_OVERRIDE;
+
 	/// Sets MLCP solver. Assumed it's not null.
 	void setMLCPSolver(btMLCPSolverInterface* solver);
 

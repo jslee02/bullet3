@@ -184,6 +184,9 @@ public:
 		virtual btScalar solveGroupCacheFriendlyIterations(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 
 //	btScalar solveGroupCacheFriendlyFinish(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal)
+	virtual btScalar solveGroupConvertBackPrestep(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
+	virtual btScalar solveGroupConvertBack(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
+	virtual btScalar solveGroupConvertBackPoststep(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
 
 	///clear internal cached data and reset random seed
 	virtual	void	reset();

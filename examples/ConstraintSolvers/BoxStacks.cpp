@@ -135,7 +135,7 @@ void BoxStacks::initPhysics()
 	btVector3 linkHalfExtents(btScalar(0.05), btScalar(0.37), btScalar(0.1));
 	btVector3 baseHalfExtents(btScalar(0.05), btScalar(0.37), btScalar(0.1));
 
-//	createBoxStack(5, 0, 0);
+	createBoxStack(1, 0, 0);
 
 	btScalar groundHeight = btScalar(-51.55);
 	btScalar mass = btScalar(0.0);
@@ -179,7 +179,7 @@ void BoxStacks::createBoxStack(int numBoxes, btScalar centerX, btScalar centerZ)
 
 	for (int i = 0; i < numBoxes; ++i)
 	{
-		startTransform.setOrigin(btVector3(centerX, btScalar(btScalar(2) * boxHalfSize * i), centerZ));
+		startTransform.setOrigin(btVector3(centerX, 1+btScalar(btScalar(2) * boxHalfSize * i), centerZ));
 		createRigidBody(mass, startTransform, colShape);
 	}
 }

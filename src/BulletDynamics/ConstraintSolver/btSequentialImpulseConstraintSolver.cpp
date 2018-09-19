@@ -554,6 +554,8 @@ void btSequentialImpulseConstraintSolver::setupFrictionConstraint(btSolverConstr
 	btRigidBody* body0 = m_tmpSolverBodyPool[solverBodyIdA].m_originalBody;
 	btRigidBody* bodyA = m_tmpSolverBodyPool[solverBodyIdB].m_originalBody;
 
+	btAssert(solverBodyIdA < m_tmpSolverBodyPool.size());
+	btAssert(solverBodyIdB < m_tmpSolverBodyPool.size());
 	solverConstraint.m_solverBodyIdA = solverBodyIdA;
 	solverConstraint.m_solverBodyIdB = solverBodyIdB;
 
@@ -830,11 +832,13 @@ int	btSequentialImpulseConstraintSolver::getOrInitSolverBody(btCollisionObject& 
 				btSolverBody& fixedBody = m_tmpSolverBodyPool.expand();
 				initSolverBody(&fixedBody,0,timeStep);
 			}
+			btAssert(m_fixedBodyId < m_tmpSolverBodyPool.size());
 			return m_fixedBodyId;
 //			return 0;//assume first one is a fixed solver body
 		}
 	}
 
+	btAssert(solverBodyIdA < m_tmpSolverBodyPool.size());
 	return solverBodyIdA;
 #endif // BT_THREADSAFE
 
@@ -1124,6 +1128,8 @@ void	btSequentialImpulseConstraintSolver::convertContact(btPersistentManifold* m
 
 			int frictionIndex = m_tmpSolverContactConstraintPool.size();
 			btSolverConstraint& solverConstraint = m_tmpSolverContactConstraintPool.expandNonInitializing();
+			btAssert(solverBodyIdA < m_tmpSolverBodyPool.size());
+			btAssert(solverBodyIdB < m_tmpSolverBodyPool.size());
 			solverConstraint.m_solverBodyIdA = solverBodyIdA;
 			solverConstraint.m_solverBodyIdB = solverBodyIdB;
 
@@ -1292,6 +1298,8 @@ void btSequentialImpulseConstraintSolver::convertJoint(btSolverConstraint* curre
 		currentConstraintRow[j].m_upperLimit = SIMD_INFINITY;
 		currentConstraintRow[j].m_appliedImpulse = 0.f;
 		currentConstraintRow[j].m_appliedPushImpulse = 0.f;
+		btAssert(solverBodyIdA < m_tmpSolverBodyPool.size());
+		btAssert(solverBodyIdB < m_tmpSolverBodyPool.size());
 		currentConstraintRow[j].m_solverBodyIdA = solverBodyIdA;
 		currentConstraintRow[j].m_solverBodyIdB = solverBodyIdB;
 		currentConstraintRow[j].m_overrideNumSolverIterations = overrideNumSolverIterations;
@@ -1975,24 +1983,44 @@ void btSequentialImpulseConstraintSolver::writeBackBodies(int iBegin, int iEnd, 
 	}
 }
 
-btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal)
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertBackPrestep(btCollisionObject** bodies, int numBodies, const btContactSolverInfo& infoGlobal)
 {
-	BT_PROFILE("solveGroupCacheFriendlyFinish");
+	return btScalar(0);
+}
 
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertBack(btCollisionObject** bodies, int numBodies, const btContactSolverInfo& infoGlobal)
+{
 	if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 	{
-        writeBackContacts(0, m_tmpSolverContactConstraintPool.size(), infoGlobal);
+		writeBackContacts(0, m_tmpSolverContactConstraintPool.size(), infoGlobal);
 	}
 
-    writeBackJoints(0, m_tmpSolverNonContactConstraintPool.size(), infoGlobal);
-    writeBackBodies(0, m_tmpSolverBodyPool.size(), infoGlobal);
+	writeBackJoints(0, m_tmpSolverNonContactConstraintPool.size(), infoGlobal);
+	writeBackBodies(0, m_tmpSolverBodyPool.size(), infoGlobal);
 
+	return btScalar(0);
+}
+
+btScalar btSequentialImpulseConstraintSolver::solveGroupConvertBackPoststep(btCollisionObject** bodies, int numBodies, const btContactSolverInfo& infoGlobal)
+{
 	m_tmpSolverContactConstraintPool.resizeNoInitialize(0);
 	m_tmpSolverNonContactConstraintPool.resizeNoInitialize(0);
 	m_tmpSolverContactFrictionConstraintPool.resizeNoInitialize(0);
 	m_tmpSolverContactRollingFrictionConstraintPool.resizeNoInitialize(0);
 
-//	m_tmpSolverBodyPool.resizeNoInitialize(0);
+	m_tmpSolverBodyPool.resizeNoInitialize(0);
+
+	return btScalar(0);
+}
+
+btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal)
+{
+	BT_PROFILE("solveGroupCacheFriendlyFinish");
+
+	solveGroupConvertBackPrestep(bodies, numBodies, infoGlobal);
+	solveGroupConvertBack(bodies, numBodies, infoGlobal);
+	solveGroupConvertBackPoststep(bodies, numBodies, infoGlobal);
+
 	return 0.f;
 }
 
@@ -2005,6 +2033,29 @@ static void copyConstraintToInternal(btConstraintArray& internalConstraints, con
 		{
 			btSolverConstraint& destConstraint = internalConstraints[i];
 			const btSolverConstraint& srcConstraint = externalConstraints[i];
+
+			btAssert(destConstraint.m_relpos1CrossNormal == srcConstraint.m_relpos1CrossNormal);
+			btAssert(destConstraint.m_contactNormal1 == srcConstraint.m_contactNormal1);
+
+			btAssert(destConstraint.m_relpos2CrossNormal == srcConstraint.m_relpos2CrossNormal);
+			btAssert(destConstraint.m_contactNormal2 == srcConstraint.m_contactNormal2);
+
+			btAssert(destConstraint.m_angularComponentA == srcConstraint.m_angularComponentA);
+			btAssert(destConstraint.m_angularComponentB == srcConstraint.m_angularComponentB);
+
+			btAssert(destConstraint.m_friction == srcConstraint.m_friction);
+			btAssert(destConstraint.m_jacDiagABInv == srcConstraint.m_jacDiagABInv);
+			btAssert(destConstraint.m_rhs == srcConstraint.m_rhs);
+			btAssert(destConstraint.m_cfm == srcConstraint.m_cfm);
+
+			btAssert(destConstraint.m_lowerLimit == srcConstraint.m_lowerLimit);
+			btAssert(destConstraint.m_upperLimit == srcConstraint.m_upperLimit);
+			btAssert(destConstraint.m_rhsPenetration == srcConstraint.m_rhsPenetration);
+
+			btAssert(destConstraint.m_overrideNumSolverIterations == srcConstraint.m_overrideNumSolverIterations);
+			btAssert(destConstraint.m_frictionIndex == srcConstraint.m_frictionIndex);
+			btAssert(destConstraint.m_solverBodyIdA == srcConstraint.m_solverBodyIdA);
+			btAssert(destConstraint.m_solverBodyIdB == srcConstraint.m_solverBodyIdB);
 
 			destConstraint.m_appliedImpulse = srcConstraint.m_appliedImpulse;
 			destConstraint.m_appliedPushImpulse = srcConstraint.m_appliedPushImpulse;
@@ -2029,6 +2080,29 @@ static void copyConstraintToExternal(btAlignedObjectArray<btSolverConstraint>& b
 			btSolverConstraint& destConstraint = blockConstraints[i];
 			const btSolverConstraint& srcConstraint = internalConstraints[i];
 
+			btAssert(destConstraint.m_relpos1CrossNormal == srcConstraint.m_relpos1CrossNormal);
+			btAssert(destConstraint.m_contactNormal1 == srcConstraint.m_contactNormal1);
+
+			btAssert(destConstraint.m_relpos2CrossNormal == srcConstraint.m_relpos2CrossNormal);
+			btAssert(destConstraint.m_contactNormal2 == srcConstraint.m_contactNormal2);
+
+			btAssert(destConstraint.m_angularComponentA == srcConstraint.m_angularComponentA);
+			btAssert(destConstraint.m_angularComponentB == srcConstraint.m_angularComponentB);
+
+			btAssert(destConstraint.m_friction == srcConstraint.m_friction);
+			btAssert(destConstraint.m_jacDiagABInv == srcConstraint.m_jacDiagABInv);
+			btAssert(destConstraint.m_rhs == srcConstraint.m_rhs);
+			btAssert(destConstraint.m_cfm == srcConstraint.m_cfm);
+
+			btAssert(destConstraint.m_lowerLimit == srcConstraint.m_lowerLimit);
+			btAssert(destConstraint.m_upperLimit == srcConstraint.m_upperLimit);
+			btAssert(destConstraint.m_rhsPenetration == srcConstraint.m_rhsPenetration);
+
+			btAssert(destConstraint.m_overrideNumSolverIterations == srcConstraint.m_overrideNumSolverIterations);
+			btAssert(destConstraint.m_frictionIndex == srcConstraint.m_frictionIndex);
+			btAssert(destConstraint.m_solverBodyIdA == srcConstraint.m_solverBodyIdA);
+			btAssert(destConstraint.m_solverBodyIdB == srcConstraint.m_solverBodyIdB);
+
 			destConstraint.m_appliedImpulse = srcConstraint.m_appliedImpulse;
 			destConstraint.m_appliedPushImpulse = srcConstraint.m_appliedPushImpulse;
 		}
@@ -2042,17 +2116,29 @@ static void copyConstraintToExternal(btAlignedObjectArray<btSolverConstraint>& b
 	}
 }
 
-void btSequentialImpulseConstraintSolver::setInternalConstraintData(const btInternalConstraintData& data, bool onlyDynamicData)
+static void copySolverBodyPool(btAlignedObjectArray<btSolverBody>& dest, const btAlignedObjectArray<btSolverBody>& src, bool onlyDynamicData = false)
 {
 	if (onlyDynamicData)
 	{
-		// TODO(JS): Needs to pack/unpack
-		m_tmpSolverBodyPool = data.m_solverBodyPool;
+		btAssert(dest.size() == src.size());
+		for (int i = 0; i < src.size(); ++i)
+		{
+			auto& destSolverBody = dest[i];
+			auto& srcSolverBody = src[i];
+
+			btAssert(destSolverBody.m_originalBody == srcSolverBody.m_originalBody);
+		}
+		dest = src;
 	}
 	else
 	{
-		m_tmpSolverBodyPool = data.m_solverBodyPool;
+		dest = src;
 	}
+}
+
+void btSequentialImpulseConstraintSolver::setInternalConstraintData(const btInternalConstraintData& data, bool onlyDynamicData)
+{
+	copySolverBodyPool(m_tmpSolverBodyPool, data.m_solverBodyPool, onlyDynamicData);
 
 	copyConstraintToInternal(m_tmpSolverNonContactConstraintPool, data.m_nonContactConstraints, onlyDynamicData);
 	copyConstraintToInternal(m_tmpSolverContactConstraintPool, data.m_normalContactConstraints, onlyDynamicData);
@@ -2062,16 +2148,7 @@ void btSequentialImpulseConstraintSolver::setInternalConstraintData(const btInte
 
 void btSequentialImpulseConstraintSolver::getInternalConstraintData(btInternalConstraintData& data, bool onlyDynamicData)
 {
-	if (onlyDynamicData)
-	{
-		// TODO(JS): Needs to pack/unpack
-		data.m_solverBodyPool = m_tmpSolverBodyPool;
-	}
-	else
-	{
-		// TODO(JS): HERE !!!
-		data.m_solverBodyPool = m_tmpSolverBodyPool;
-	}
+	copySolverBodyPool(data.m_solverBodyPool, m_tmpSolverBodyPool, onlyDynamicData);
 
 	copyConstraintToExternal(data.m_nonContactConstraints, m_tmpSolverNonContactConstraintPool, onlyDynamicData);
 	copyConstraintToExternal(data.m_normalContactConstraints, m_tmpSolverContactConstraintPool, onlyDynamicData);

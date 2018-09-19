@@ -698,9 +698,131 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 	const btContactSolverInfo& infoGlobal,
 	btIDebugDraw* debugDrawer)
 {
-	// 1. Setup for rigid-bodies
-	btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(
+	return btMultiBodyConstraintSolver::solveGroupCacheFriendlySetup(
 		bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+}
+
+btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+{
+	// Update or setup b, bSplit, based on applied impulse
+
+	bool result = true;
+	{
+		BT_PROFILE("solveMLCP");
+		result = solveMLCP(infoGlobal);
+	}
+
+	// Fallback to btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyIterations if the solution isn't valid.
+	if (!result)
+	{
+		m_fallback++;
+		return btMultiBodyConstraintSolver::solveGroupCacheFriendlyIterations(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+	}
+
+	{
+		BT_PROFILE("process MLCP results");
+
+		for (int i = 0; i < m_allConstraintPtrArray.size(); ++i)
+		{
+			const btSolverConstraint& c = *m_allConstraintPtrArray[i];
+
+			const btScalar deltaImpulse = m_x[i] - c.m_appliedImpulse;
+			c.m_appliedImpulse = m_x[i];
+
+			int sbA = c.m_solverBodyIdA;
+			int sbB = c.m_solverBodyIdB;
+
+			btSolverBody& solverBodyA = m_tmpSolverBodyPool[sbA];
+			btSolverBody& solverBodyB = m_tmpSolverBodyPool[sbB];
+
+			solverBodyA.internalApplyImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaImpulse);
+			solverBodyB.internalApplyImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaImpulse);
+
+			if (infoGlobal.m_splitImpulse)
+			{
+				const btScalar deltaPushImpulse = m_xSplit[i] - c.m_appliedPushImpulse;
+				solverBodyA.internalApplyPushImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaPushImpulse);
+				solverBodyB.internalApplyPushImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaPushImpulse);
+				c.m_appliedPushImpulse = m_xSplit[i];
+			}
+		}
+
+		for (int i = 0; i < m_multiBodyAllConstraintPtrArray.size(); ++i)
+		{
+			btMultiBodySolverConstraint& c = *m_multiBodyAllConstraintPtrArray[i];
+
+			const btScalar deltaImpulse = m_multiBodyX[i] - c.m_appliedImpulse;
+			c.m_appliedImpulse = m_multiBodyX[i];
+
+			btMultiBody* multiBodyA = c.m_multiBodyA;
+			if (multiBodyA)
+			{
+				const int ndofA = multiBodyA->getNumDofs() + 6;
+				applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse, c.m_deltaVelAindex, ndofA);
+#ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
+				//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
+				//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
+				multiBodyA->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse);
+#endif  // DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
+			}
+			else
+			{
+				const int sbA = c.m_solverBodyIdA;
+				btSolverBody& solverBodyA = m_tmpSolverBodyPool[sbA];
+				solverBodyA.internalApplyImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaImpulse);
+			}
+
+			btMultiBody* multiBodyB = c.m_multiBodyB;
+			if (multiBodyB)
+			{
+				const int ndofB = multiBodyB->getNumDofs() + 6;
+				applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse, c.m_deltaVelBindex, ndofB);
+#ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
+				//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
+				//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
+				multiBodyB->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse);
+#endif  // DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
+			}
+			else
+			{
+				const int sbB = c.m_solverBodyIdB;
+				btSolverBody& solverBodyB = m_tmpSolverBodyPool[sbB];
+				solverBodyB.internalApplyImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaImpulse);
+			}
+		}
+	}
+
+	return btScalar(0);
+}
+
+btMultiBodyMLCPConstraintSolver::btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver)
+	: m_solver(solver), m_fallback(0)
+{
+	// Do nothing
+}
+
+btMultiBodyMLCPConstraintSolver::~btMultiBodyMLCPConstraintSolver()
+{
+	// Do nothing
+}
+
+btScalar btMultiBodyMLCPConstraintSolver::solveGroupConvertConstraintPrestep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+{
+	// 1. Setup for rigid-bodies
+	return btMultiBodyConstraintSolver::solveGroupConvertConstraintPrestep(
+		bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+}
+
+btScalar btMultiBodyMLCPConstraintSolver::solveGroupConvertConstraints(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+{
+	// 1. Setup for rigid-bodies
+	return btMultiBodyConstraintSolver::solveGroupConvertConstraints(
+		bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
+}
+
+btScalar btMultiBodyMLCPConstraintSolver::solveGroupConvertConstraintPoststep(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
+{
+	btMultiBodyConstraintSolver::solveGroupConvertConstraintPoststep(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 
 	// 2. Setup for multi-bodies
 	//   a. Collect all different kinds of constraint as pointers into one array, m_allConstraintPtrArray
@@ -841,108 +963,6 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlySetup(
 	}
 
 	return btScalar(0);
-}
-
-btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCollisionObject** bodies, int numBodies, btPersistentManifold** manifoldPtr, int numManifolds, btTypedConstraint** constraints, int numConstraints, const btContactSolverInfo& infoGlobal, btIDebugDraw* debugDrawer)
-{
-	bool result = true;
-	{
-		BT_PROFILE("solveMLCP");
-		result = solveMLCP(infoGlobal);
-	}
-
-	// Fallback to btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyIterations if the solution isn't valid.
-	if (!result)
-	{
-		m_fallback++;
-		return btMultiBodyConstraintSolver::solveGroupCacheFriendlyIterations(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
-	}
-
-	{
-		BT_PROFILE("process MLCP results");
-
-		for (int i = 0; i < m_allConstraintPtrArray.size(); ++i)
-		{
-			const btSolverConstraint& c = *m_allConstraintPtrArray[i];
-
-			const btScalar deltaImpulse = m_x[i] - c.m_appliedImpulse;
-			c.m_appliedImpulse = m_x[i];
-
-			int sbA = c.m_solverBodyIdA;
-			int sbB = c.m_solverBodyIdB;
-
-			btSolverBody& solverBodyA = m_tmpSolverBodyPool[sbA];
-			btSolverBody& solverBodyB = m_tmpSolverBodyPool[sbB];
-
-			solverBodyA.internalApplyImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaImpulse);
-			solverBodyB.internalApplyImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaImpulse);
-
-			if (infoGlobal.m_splitImpulse)
-			{
-				const btScalar deltaPushImpulse = m_xSplit[i] - c.m_appliedPushImpulse;
-				solverBodyA.internalApplyPushImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaPushImpulse);
-				solverBodyB.internalApplyPushImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaPushImpulse);
-				c.m_appliedPushImpulse = m_xSplit[i];
-			}
-		}
-
-		for (int i = 0; i < m_multiBodyAllConstraintPtrArray.size(); ++i)
-		{
-			btMultiBodySolverConstraint& c = *m_multiBodyAllConstraintPtrArray[i];
-
-			const btScalar deltaImpulse = m_multiBodyX[i] - c.m_appliedImpulse;
-			c.m_appliedImpulse = m_multiBodyX[i];
-
-			btMultiBody* multiBodyA = c.m_multiBodyA;
-			if (multiBodyA)
-			{
-				const int ndofA = multiBodyA->getNumDofs() + 6;
-				applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse, c.m_deltaVelAindex, ndofA);
-#ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
-				//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
-				//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
-				multiBodyA->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacAindex], deltaImpulse);
-#endif  // DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
-			}
-			else
-			{
-				const int sbA = c.m_solverBodyIdA;
-				btSolverBody& solverBodyA = m_tmpSolverBodyPool[sbA];
-				solverBodyA.internalApplyImpulse(c.m_contactNormal1 * solverBodyA.internalGetInvMass(), c.m_angularComponentA, deltaImpulse);
-			}
-
-			btMultiBody* multiBodyB = c.m_multiBodyB;
-			if (multiBodyB)
-			{
-				const int ndofB = multiBodyB->getNumDofs() + 6;
-				applyDeltaVee(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse, c.m_deltaVelBindex, ndofB);
-#ifdef DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
-				//note: update of the actual velocities (below) in the multibody does not have to happen now since m_deltaVelocities can be applied after all iterations
-				//it would make the multibody solver more like the regular one with m_deltaVelocities being equivalent to btSolverBody::m_deltaLinearVelocity/m_deltaAngularVelocity
-				multiBodyB->applyDeltaVeeMultiDof2(&m_data.m_deltaVelocitiesUnitImpulse[c.m_jacBindex], deltaImpulse);
-#endif  // DIRECTLY_UPDATE_VELOCITY_DURING_SOLVER_ITERATIONS
-			}
-			else
-			{
-				const int sbB = c.m_solverBodyIdB;
-				btSolverBody& solverBodyB = m_tmpSolverBodyPool[sbB];
-				solverBodyB.internalApplyImpulse(c.m_contactNormal2 * solverBodyB.internalGetInvMass(), c.m_angularComponentB, deltaImpulse);
-			}
-		}
-	}
-
-	return btScalar(0);
-}
-
-btMultiBodyMLCPConstraintSolver::btMultiBodyMLCPConstraintSolver(btMLCPSolverInterface* solver)
-	: m_solver(solver), m_fallback(0)
-{
-	// Do nothing
-}
-
-btMultiBodyMLCPConstraintSolver::~btMultiBodyMLCPConstraintSolver()
-{
-	// Do nothing
 }
 
 void btMultiBodyMLCPConstraintSolver::setMLCPSolver(btMLCPSolverInterface* solver)

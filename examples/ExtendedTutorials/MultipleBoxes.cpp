@@ -136,39 +136,39 @@ void MultipleBoxesExample::initPhysics()
 		g_constraintSolverType = 0;
 	}
 
-    g_demo = 1;
+	g_demo = 0;
 
     if (g_demo == 0)
     {
 
         btMultiBodyConstraintSolver* sol = new btMultiBodyBlockConstraintSolver();
-        btMLCPSolverInterface* mlcp;
-        switch (g_constraintSolverType++)
-        {
-        case 0:
-            sol = new btMultiBodyConstraintSolver;
-            b3Printf("Constraint Solver: Sequential Impulse");
-            break;
-        case 1:
-            mlcp = new btSolveProjectedGaussSeidel();
-            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-            b3Printf("Constraint Solver: MLCP + PGS");
-            break;
-        case 2:
-            mlcp = new btDantzigSolver();
-            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-            b3Printf("Constraint Solver: MLCP + Dantzig");
-            break;
-        default:
-            mlcp = new btLemkeSolver();
-            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-            b3Printf("Constraint Solver: MLCP + Lemke");
-            break;
-        }
-        m_solver = sol;
+//        btMLCPSolverInterface* mlcp;
+//        switch (g_constraintSolverType++)
+//        {
+//        case 0:
+//            sol = new btMultiBodyConstraintSolver;
+//            b3Printf("Constraint Solver: Sequential Impulse");
+//            break;
+//        case 1:
+//            mlcp = new btSolveProjectedGaussSeidel();
+//            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+//            b3Printf("Constraint Solver: MLCP + PGS");
+//            break;
+//        case 2:
+//            mlcp = new btDantzigSolver();
+//            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+//            b3Printf("Constraint Solver: MLCP + Dantzig");
+//            break;
+//        default:
+//            mlcp = new btLemkeSolver();
+//            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+//            b3Printf("Constraint Solver: MLCP + Lemke");
+//            break;
+//        }
+		m_solver = sol;
 
-        btMultiBodyDynamicsWorld* world = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, sol, m_collisionConfiguration);
-        m_dynamicsWorld = world;
+		btMultiBodyDynamicsWorld* world = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, sol, m_collisionConfiguration);
+		m_dynamicsWorld = world;
 
         auto& info = m_dynamicsWorld->getSolverInfo();
         info.m_globalCfm = 0.01;
@@ -255,7 +255,8 @@ void MultipleBoxesExample::makeScene1()
     {
         //create a few dynamic rigidbodies
         // Re-using the same collision is better for memory usage and performance
-        btBoxShape* colShape = createBoxShape(btVector3(1,1,1));
+		//btBoxShape* colShape = createBoxShape(btVector3(1,1,1));
+		btSphereShape* colShape = new btSphereShape(1);
 
         m_collisionShapes.push_back(colShape);
 
@@ -273,7 +274,8 @@ void MultipleBoxesExample::makeScene1()
             colShape->calculateLocalInertia(mass,localInertia);
 
 
-        for(int i=0;i<TOTAL_BOXES;++i)
+		//for(int i=0;i<TOTAL_BOXES;++i)
+		for(int i=0;i<1;++i)
         {
             startTransform.setOrigin(btVector3(
                                          btScalar(0),

@@ -30,12 +30,15 @@ struct btMultiBodyConstraintBlock
 {
 	/// \{ \name Rigid-body Data
 
-	btAlignedObjectArray<btSolverBody>* m_originalSolverBodyPool;
+//	btAlignedObjectArray<btSolverBody>* m_originalSolverBodyPoolPtr;
 
-	btAlignedObjectArray<btRigidBody*> m_originalRigidBodyPtrs;
+//	btAlignedObjectArray<btSolverBody> m_blockSolverBodyPool;
+
+	btAlignedObjectArray<int> m_originalSolverBodyIds;
 
 	/// The number of IDs should be the same as the number of rigid bodies
-	btAlignedObjectArray<int> m_companionIds;
+	btAlignedObjectArray<int> m_originalRigidBodyCompanionIds;
+	btAlignedObjectArray<int> m_blockRigidBodyCompanionIds;
 
 	/// Array of non-contact constraints
 	btAlignedObjectArray<btSolverConstraint*> m_originalNonContactConstraintPtrs;
@@ -57,7 +60,7 @@ struct btMultiBodyConstraintBlock
 	btAlignedObjectArray<int> m_originalDeltaVelIndices;
 	btAlignedObjectArray<int> m_deltaVelIndices;
 
-	btMultiBodyJacobianData* m_originalDataPtr;
+//	btMultiBodyJacobianData* m_originalDataPtr;
 
 	btAlignedObjectArray<btMultiBodySolverConstraint*> m_originalMultiBodyNonContactConstraintPtrs;
 	btAlignedObjectArray<btMultiBodySolverConstraint*> m_originalMultiBodyNormalContactConstraintPtrs;
@@ -104,6 +107,8 @@ struct btMultiBodyConstraintBlock
 
 	void copyRigidBodyDynamicDataFromOriginalToBlock();
 	void copyRigidBodyDynamicDataFromBlockToOriginal();
+
+//	int getOrInitSolverBody();
 };
 
 class btMultiBodyBlockSplittingPolicy
@@ -196,6 +201,12 @@ protected:
 
 	/// Sets the splitting policy.
 	virtual void setSplittingPolicy(btMultiBodyBlockSplittingPolicy* policy);
+
+	void copyDynamicDataFromOriginalToBlock(btMultiBodyConstraintBlock& block);
+	void copyDynamicDataFromBlockToOriginal(btMultiBodyConstraintBlock& block);
+
+	void copyRigidBodyDynamicDataFromOriginalToBlock(btMultiBodyConstraintBlock& block);
+	void copyRigidBodyDynamicDataFromBlockToOriginal(btMultiBodyConstraintBlock& block);
 
 	/// Adds a constraint block configuration and returns the total number of configurations added to this solver.
 	virtual int addConfig(btBlockConstraintSolverConfig& config);
