@@ -89,6 +89,8 @@ public:
 
 	struct btMultiBodyInternalConstraintData
 	{
+		btSequentialImpulseConstraintSolver::btInternalConstraintData m_rigidBodyData;
+
 		/// Multibody (joint) constraints. This is shared by all the blocks.
 		btMultiBodyConstraint** m_multiBodyConstraints;
 

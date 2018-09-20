@@ -28,6 +28,32 @@ struct btBlockConstraintSolverConfig
 
 struct btMultiBodyConstraintBlock
 {
+	/// \{ \name Rigid-body Data
+
+//	btAlignedObjectArray<btSolverBody>* m_originalSolverBodyPoolPtr;
+
+//	btAlignedObjectArray<btSolverBody> m_blockSolverBodyPool;
+
+	btAlignedObjectArray<int> m_originalSolverBodyIds;
+
+	/// The number of IDs should be the same as the number of rigid bodies
+	btAlignedObjectArray<int> m_originalRigidBodyCompanionIds;
+	btAlignedObjectArray<int> m_blockRigidBodyCompanionIds;
+
+	/// Array of non-contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_originalNonContactConstraintPtrs;
+
+	/// Array of normal contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_originalNormalContactConstraintPtrs;
+
+	/// Array of friction contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_originalFrictionContactConstraintPtrs;
+
+	/// Array of rolling friction contact constraints
+	btAlignedObjectArray<btSolverConstraint*> m_originalRollingFrictionContactConstraintPtrs;
+
+	/// \}
+
 	/// \{ \name Multi-body Data
 
 	btAlignedObjectArray<btMultiBody*> m_multiBodies;
@@ -78,6 +104,11 @@ struct btMultiBodyConstraintBlock
 
 	void copyDynamicDataFromOriginalToBlock();
 	void copyDynamicDataFromBlockToOriginal();
+
+	void copyRigidBodyDynamicDataFromOriginalToBlock();
+	void copyRigidBodyDynamicDataFromBlockToOriginal();
+
+//	int getOrInitSolverBody();
 };
 
 class btMultiBodyBlockSplittingPolicy
@@ -99,6 +130,13 @@ protected:
 		btMultiBodyConstraintBlock& block,
 		btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& originalInternalData,
 		int originalNonContactConstraintIndex);
+
+	void copyRigidBodyContactConstraint(
+		btMultiBodyConstraintBlock& block,
+		btSequentialImpulseConstraintSolver::btInternalConstraintData& originalInternalData,
+		int originalNormalContactConstraintIndex);
+
+	// void copyMultiBodyNonContactConstraint();
 
 	void copyMultiBodyContactConstraint(
 		btMultiBodyConstraintBlock& block,
@@ -169,6 +207,9 @@ protected:
 
 	void copyDynamicDataFromOriginalToBlock(btMultiBodyConstraintBlock& block);
 	void copyDynamicDataFromBlockToOriginal(btMultiBodyConstraintBlock& block);
+
+	void copyRigidBodyDynamicDataFromOriginalToBlock(btMultiBodyConstraintBlock& block);
+	void copyRigidBodyDynamicDataFromBlockToOriginal(btMultiBodyConstraintBlock& block);
 
 	/// Adds a constraint block configuration and returns the total number of configurations added to this solver.
 	virtual int addConfig(btBlockConstraintSolverConfig& config);
