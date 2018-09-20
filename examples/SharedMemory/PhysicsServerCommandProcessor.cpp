@@ -2377,12 +2377,12 @@ void PhysicsServerCommandProcessor::createEmptyDynamicsWorld()
 	m_data->m_broadphase = bv;
     
 
-//	m_data->m_solver = new btMultiBodyConstraintSolver;
+	m_data->m_solver = new btMultiBodyConstraintSolver;
 
 //	m_data->m_lcp_solver = new btDantzigSolver;
 //	m_data->m_solver = new btMultiBodyMLCPConstraintSolver(m_data->m_lcp_solver);
 
-	m_data->m_solver = new btMultiBodyBlockConstraintSolver();
+//	m_data->m_solver = new btMultiBodyBlockConstraintSolver();
     
 #ifndef SKIP_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
     m_data->m_dynamicsWorld = new btSoftMultiBodyDynamicsWorld(m_data->m_dispatcher, m_data->m_broadphase, m_data->m_solver, m_data->m_collisionConfiguration);
@@ -7407,6 +7407,8 @@ bool PhysicsServerCommandProcessor::processSendPhysicsParametersCommand(const st
                 }
                 case eConstraintSolverLCP_BLOCK_PGS:
                 {
+					newSolver = new btMultiBodyBlockConstraintSolver();
+					b3Printf("PyBullet: Constraint Solver: Block\n");
                     break;
                 }
                 default:

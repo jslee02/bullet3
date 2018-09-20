@@ -9661,9 +9661,9 @@ initpybullet(void)
     PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_SI",eConstraintSolverLCP_SI);
     PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_PGS",eConstraintSolverLCP_PGS);
     PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_DANTZIG",eConstraintSolverLCP_DANTZIG);
-    //PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_LEMKE",eConstraintSolverLCP_LEMKE);
-    //PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_NNCF",eConstraintSolverLCP_NNCG);
-    //PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_BLOCK",eConstraintSolverLCP_BLOCK_PGS);
+    PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_LEMKE",eConstraintSolverLCP_LEMKE);
+    PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_NNCF",eConstraintSolverLCP_NNCG);
+    PyModule_AddIntConstant(m, "CONSTRAINT_SOLVER_LCP_BLOCK",eConstraintSolverLCP_BLOCK_PGS);
                                 
 	PyModule_AddIntConstant(m, "VR_BUTTON_IS_DOWN", eButtonIsDown);
 	PyModule_AddIntConstant(m, "VR_BUTTON_WAS_TRIGGERED", eButtonTriggered);

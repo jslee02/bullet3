@@ -137,7 +137,7 @@ void MultipleBoxesExample::initPhysics()
 		g_constraintSolverType = 0;
 	}
 
-	g_demo = 1;
+	g_demo = 0;
 
     if (g_demo == 0)
     {

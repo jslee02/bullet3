@@ -16,10 +16,12 @@ subject to the following restrictions:
 #include "btMultiBodyBlockConstraintSolver.h"
 
 #include <string.h>
+#include <iostream>
 
 #include "LinearMath/btQuickprof.h"
 #include "btMultiBodyMLCPConstraintSolver.h"
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
+#include "BulletDynamics/MLCPSolvers/btLemkeSolver.h"
 
 btMultiBodyConstraintBlock::btMultiBodyConstraintBlock()
 	: m_constraintConfigId(-1)
@@ -717,23 +719,28 @@ void btDoubleBlockSplittingPolicy::split(
 	btMultiBodyConstraintBlock constraintBlock1 = initializeConstraintBlock(originalInternalData);
 	btMultiBodyConstraintBlock constraintBlock2 = initializeConstraintBlock(originalInternalData);
 	btMultiBodyConstraintBlock constraintBlock3 = initializeConstraintBlock(originalInternalData);
+	btMultiBodyConstraintBlock constraintBlock4 = initializeConstraintBlock(originalInternalData);
 
 	constraintBlock1.m_solver = m_solver;
 	constraintBlock2.m_solver = m_solver;
 	constraintBlock3.m_solver = m_solver;
+	constraintBlock4.m_solver = m_solver;
 
+	btMLCPSolverInterface* mlcp = new btDantzigSolver();
+//	btMLCPSolverInterface* mlcp = new btLemkeSolver();
+//	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+	constraintBlock1.m_solver = new btMultiBodyConstraintSolver();
+	constraintBlock2.m_solver = new btMultiBodyConstraintSolver();
+	constraintBlock3.m_solver = new btMultiBodyMLCPConstraintSolver(mlcp);
+//	constraintBlock4.m_solver = sol;
 
-	btDantzigSolver* mlcp = new btDantzigSolver();
-	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-//	constraintBlock2.m_solver = sol;
+//	const int totalRigidBodyContactConstraintSize = originalInternalData.m_rigidBodyData.m_normalContactConstraints.size();
+//	const int halfRigidBodyContactConstraintSize = totalRigidBodyContactConstraintSize / 2;
 
-	const int totalRigidBodyContactConstraintSize = originalInternalData.m_rigidBodyData.m_normalContactConstraints.size();
-	const int halfRigidBodyContactConstraintSize = totalRigidBodyContactConstraintSize / 2;
-
-	for (int i = 0; i < totalRigidBodyContactConstraintSize; ++i)
-	{
-		copyRigidBodyContactConstraint(constraintBlock1, originalInternalData.m_rigidBodyData, i);
-	}
+//	for (int i = 0; i < totalRigidBodyContactConstraintSize; ++i)
+//	{
+//		copyRigidBodyContactConstraint(constraintBlock1, originalInternalData.m_rigidBodyData, i);
+//	}
 
 //	for (int i = 0; i < halfRigidBodyContactConstraintSize; ++i)
 //	{
@@ -748,6 +755,8 @@ void btDoubleBlockSplittingPolicy::split(
 	const int totalMultiBodyContactConstraintSize = originalInternalData.m_multiBodyNormalContactConstraints.size();
 	const int halfMultiBodyContactConstraintSize = totalMultiBodyContactConstraintSize / 2;
 
+	std::cout << "Using BLOCK solver!" << std::endl;
+
 	for (int i = 0; i < halfMultiBodyContactConstraintSize; ++i)
 	{
 		copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
@@ -759,10 +768,16 @@ void btDoubleBlockSplittingPolicy::split(
 	}
 
 	const int totalMultiBodyNonContactConstraintSize = originalInternalData.m_multiBodyNonContactConstraints.size();
+	const int halfMultiBodyNonContactConstraintSize = originalInternalData.m_multiBodyNonContactConstraints.size() / 2;
 
-	for (int i = 0; i < totalMultiBodyNonContactConstraintSize; ++i)
+	for (int i = 0; i < halfMultiBodyNonContactConstraintSize; ++i)
 	{
-//		copyMultiBodyNonContactConstraint(constraintBlock3, originalInternalData, i);
+		copyMultiBodyNonContactConstraint(constraintBlock3, originalInternalData, i);
+	}
+
+	for (int i = halfMultiBodyNonContactConstraintSize; i < totalMultiBodyNonContactConstraintSize; ++i)
+	{
+		copyMultiBodyNonContactConstraint(constraintBlock3, originalInternalData, i);
 	}
 
 
@@ -777,6 +792,7 @@ void btDoubleBlockSplittingPolicy::split(
 	subBlocks.push_back(constraintBlock1);
 	subBlocks.push_back(constraintBlock2);
 	subBlocks.push_back(constraintBlock3);
+//	subBlocks.push_back(constraintBlock4);
 }
 
 btMultiBodyBlockSplittingPolicy::~btMultiBodyBlockSplittingPolicy()
@@ -1046,18 +1062,17 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	m_blocks.resize(0);
 	m_splittingPolicy->split(originalInternalDataCopy, configs, m_blocks);
 
-//	for (int i = 0; i < m_blocks.size(); ++i)
-//	{
-//		btMultiBodyConstraintBlock& block = m_blocks[i];
-//		btMultiBodyConstraintSolver* solver = block.m_solver;
-//		btAssert(solver);
+	for (int i = 0; i < m_blocks.size(); ++i)
+	{
+		btMultiBodyConstraintBlock& block = m_blocks[i];
+		btMultiBodyConstraintSolver* solver = block.m_solver;
+		btAssert(solver);
 
-//		solver->solveGroupConvertConstraintPrestep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
-//		copyDynamicDataFromOriginalToBlock(block);
-////			block.copyDynamicDataFromOriginalToBlock();
-//		solver->setMultiBodyInternalConstraintData(block.m_internalData, false);
-//		solver->solveGroupConvertConstraintPoststep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
-//	}
+		solver->solveGroupConvertConstraintPrestep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
+		copyDynamicDataFromOriginalToBlock(block);
+		solver->setMultiBodyInternalConstraintData(block.m_internalData, false);
+		solver->solveGroupConvertConstraintPoststep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
+	}
 
 	// 3. Gauss-Seidel iterations
 
@@ -1089,7 +1104,7 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 			solver->solveGroupConvertBack(bodies, numBodies, info);
 			solver->getMultiBodyInternalConstraintData(block.m_internalData, false);
 			copyDynamicDataFromBlockToOriginal(block);
-			solver->solveGroupConvertBackPoststep(bodies, numBodies, info);
+//			solver->solveGroupConvertBackPoststep(bodies, numBodies, info);
 		}
 
 		if (m_leastSquaresResidual <= info.m_leastSquaresResidualThreshold || (iteration >= (maxIterations - 1)))
@@ -1101,11 +1116,18 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 		}
 	}
 
-//	solveGroupConvertBackPrestep(bodies, numBodies, info);
-//	solveGroupConvertBack(bodies, numBodies, info);
-//	getMultiBodyInternalConstraintData(block.m_internalData, false);
-//	copyDynamicDataFromBlockToOriginal(block);
-//	solveGroupConvertBackPoststep(bodies, numBodies, info);
+	for (int i = 0; i < m_blocks.size(); ++i)
+	{
+		btMultiBodyConstraintBlock& block = m_blocks[i];
+		btMultiBodyConstraintSolver* solver = block.m_solver;
+		btAssert(solver);
+
+		solver->solveGroupConvertBackPrestep(bodies, numBodies, info);
+		solver->solveGroupConvertBack(bodies, numBodies, info);
+		solver->getMultiBodyInternalConstraintData(block.m_internalData, false);
+		copyDynamicDataFromBlockToOriginal(block);
+		solver->solveGroupConvertBackPoststep(bodies, numBodies, info);
+	}
 
 	solveGroupCacheFriendlyFinish(bodies, numBodies, info);
 

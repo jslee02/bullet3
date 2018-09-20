@@ -74,7 +74,7 @@ struct btMultiBodyConstraintBlock
 	/// Constraint solver
 	btMultiBodyConstraintSolver* m_solver;
 
-	bool m_ownSolver = false;
+	bool m_ownSolver = true;
 	// TODO(JS): If this is true, then don't copy all the constraint data, but
 	// only dynamic data
 	// TODO(JS): not utilized yet

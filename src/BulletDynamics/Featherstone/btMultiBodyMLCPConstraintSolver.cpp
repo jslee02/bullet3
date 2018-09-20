@@ -630,7 +630,8 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastMultiBody(const btContactSol
 	// Add CFM to the diagonal of m_A
 	for (int i = 0; i < m_multiBodyA.rows(); ++i)
 	{
-		m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
+		m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + (infoGlobal.m_globalCfm + btScalar(0.01)) / infoGlobal.m_timeStep);
+//		m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
 	}
 
 	// 4. Initialize x
