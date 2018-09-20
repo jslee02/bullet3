@@ -11,13 +11,16 @@
 #include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
 #include "BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h"
 #include "BulletDynamics/Featherstone/btMultiBodyMLCPConstraintSolver.h"
-
+#include "BulletDynamics/Featherstone/btMultiBodyBlockConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
 #include "BulletDynamics/Featherstone/btMultiBodyPoint2Point.h"
 #include "BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
 #include "BulletDynamics/Featherstone/btMultiBodyJointFeedback.h"
 #include "BulletDynamics/Featherstone/btMultiBodyFixedConstraint.h"
 #include "BulletDynamics/Featherstone/btMultiBodyGearConstraint.h"
+
+#include "BulletDynamics/MLCPSolvers/btDantzigSolver.h"
+
 #include "../Importers/ImportURDFDemo/UrdfParser.h"
 #include "../Utils/b3ResourcePath.h"
 #include "Bullet3Common/b3FileUtils.h"
@@ -1593,6 +1596,7 @@ struct PhysicsServerCommandProcessorInternalData
 	btHashedOverlappingPairCache* m_pairCache;
 	btBroadphaseInterface*	m_broadphase;
 	btCollisionDispatcher*	m_dispatcher;
+	btDantzigSolver* m_lcp_solver;
 	btMultiBodyConstraintSolver*	m_solver;
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
     
@@ -1659,6 +1663,7 @@ struct PhysicsServerCommandProcessorInternalData
 		m_pairCache(0),
 		m_broadphase(0),
 		m_dispatcher(0),
+		m_lcp_solver(0),
 		m_solver(0),
 		m_collisionConfiguration(0),
 		m_dynamicsWorld(0),
@@ -2372,7 +2377,12 @@ void PhysicsServerCommandProcessor::createEmptyDynamicsWorld()
 	m_data->m_broadphase = bv;
     
 
-    m_data->m_solver = new btMultiBodyConstraintSolver;
+//	m_data->m_solver = new btMultiBodyConstraintSolver;
+
+//	m_data->m_lcp_solver = new btDantzigSolver;
+//	m_data->m_solver = new btMultiBodyMLCPConstraintSolver(m_data->m_lcp_solver);
+
+	m_data->m_solver = new btMultiBodyBlockConstraintSolver();
     
 #ifndef SKIP_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD
     m_data->m_dynamicsWorld = new btSoftMultiBodyDynamicsWorld(m_data->m_dispatcher, m_data->m_broadphase, m_data->m_solver, m_data->m_collisionConfiguration);
@@ -2603,6 +2613,9 @@ void PhysicsServerCommandProcessor::deleteDynamicsWorld()
 
 	delete m_data->m_remoteDebugDrawer;
 	m_data->m_remoteDebugDrawer =0;
+
+	delete m_data->m_lcp_solver;
+	m_data->m_lcp_solver=0;
 
 	delete m_data->m_solver;
 	m_data->m_solver=0;

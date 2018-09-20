@@ -1465,7 +1465,7 @@ static void copyConstraintsToProxy(btAlignedObjectArray<btMultiBodySolverConstra
 
 void btMultiBodyConstraintSolver::setMultiBodyInternalConstraintData(const btMultiBodyInternalConstraintData& data, bool onlyDynamicData)
 {
-	copyConstraintsFromProxy(m_multiBodyNonContactConstraints, data.m_nonContactConstraints, onlyDynamicData);
+	copyConstraintsFromProxy(m_multiBodyNonContactConstraints, data.m_multiBodyNonContactConstraints, onlyDynamicData);
 	copyConstraintsFromProxy(m_multiBodyNormalContactConstraints, data.m_multiBodyNormalContactConstraints, onlyDynamicData);
 	copyConstraintsFromProxy(m_multiBodyFrictionContactConstraints, data.m_multiBodyFrictionContactConstraints, onlyDynamicData);
 	copyConstraintsFromProxy(m_multiBodyTorsionalFrictionContactConstraints, data.m_multiBodyTorsionalFrictionContactConstraints, onlyDynamicData);
@@ -1478,7 +1478,7 @@ void btMultiBodyConstraintSolver::setMultiBodyInternalConstraintData(const btMul
 
 void btMultiBodyConstraintSolver::getMultiBodyInternalConstraintData(btMultiBodyInternalConstraintData& data, bool onlyDynamicData)
 {
-	copyConstraintsToProxy(data.m_nonContactConstraints, m_multiBodyNonContactConstraints, onlyDynamicData);
+	copyConstraintsToProxy(data.m_multiBodyNonContactConstraints, m_multiBodyNonContactConstraints, onlyDynamicData);
 	copyConstraintsToProxy(data.m_multiBodyNormalContactConstraints, m_multiBodyNormalContactConstraints, onlyDynamicData);
 	copyConstraintsToProxy(data.m_multiBodyFrictionContactConstraints, m_multiBodyFrictionContactConstraints, onlyDynamicData);
 	copyConstraintsToProxy(data.m_multiBodyTorsionalFrictionContactConstraints, m_multiBodyTorsionalFrictionContactConstraints, onlyDynamicData);

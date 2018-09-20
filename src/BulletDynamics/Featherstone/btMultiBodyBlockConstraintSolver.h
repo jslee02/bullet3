@@ -95,7 +95,10 @@ public:
 	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& blocksOutput) = 0;
 
 protected:
-	// void copyMultiBodyNonContactConstraint();
+	void copyMultiBodyNonContactConstraint(
+		btMultiBodyConstraintBlock& block,
+		btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& originalInternalData,
+		int originalNonContactConstraintIndex);
 
 	void copyMultiBodyContactConstraint(
 		btMultiBodyConstraintBlock& block,

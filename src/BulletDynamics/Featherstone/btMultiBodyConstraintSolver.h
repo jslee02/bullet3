@@ -97,7 +97,7 @@ public:
 		int m_numMultiBodyConstraints;
 
 		/// Array of multibody non-contact constraints
-		btAlignedObjectArray<btMultiBodySolverConstraint> m_nonContactConstraints;
+		btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNonContactConstraints;
 
 		/// Array of multibody normal contact constraints
 		btAlignedObjectArray<btMultiBodySolverConstraint> m_multiBodyNormalContactConstraints;

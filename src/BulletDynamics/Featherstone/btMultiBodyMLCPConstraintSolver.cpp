@@ -706,6 +706,106 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 {
 	// Update or setup b, bSplit, based on applied impulse
 
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& allConstraintPtrArray = m_multiBodyAllConstraintPtrArray;
+	btMatrixXu& A = m_multiBodyA;
+	btVectorXu& b = m_multiBodyB;
+	//	btVectorXu& bSplit = m_bSplit;
+	btVectorXu& x = m_multiBodyX;
+	//	btVectorXu& xSplit = m_xSplit;
+	btVectorXu& lo = m_multiBodyLo;
+	btVectorXu& hi = m_multiBodyHi;
+	btAlignedObjectArray<int>& limitDependencies = m_multiBodyLimitDependencies;
+
+	if (A.rows() == 0)
+		return true;
+
+	const int numMultiBodyConstraints = allConstraintPtrArray.size();
+
+	// Update b, ho, and hi in Gauss-Seidel style
+	for (int i = 0; i < numMultiBodyConstraints; ++i)
+	{
+		const btMultiBodySolverConstraint& c = *(allConstraintPtrArray[i]);
+
+		const btScalar jacDiag = c.m_jacDiagABInv;
+		if (!btFuzzyZero(jacDiag))
+		{
+			const btScalar rhs = c.m_rhs;
+			b[i] = rhs / jacDiag;
+
+			const btMultiBody* multiBodyA = c.m_multiBodyA;
+			if (multiBodyA)
+			{
+				const btScalar* jacA = &m_data.m_jacobians[c.m_jacAindex];
+				const btScalar* deltaA = &m_data.m_deltaVelocities[c.m_deltaVelAindex];
+				const int ndofA = multiBodyA->getNumDofs() + 6;
+				const btScalar deltaVel1Dotn = computeDeltaVelocityInConstraintSpace(deltaA, jacA, ndofA);
+				b[i] -= deltaVel1Dotn;
+			}
+			else
+			{
+				const int solverBodyIdA = c.m_solverBodyIdA;
+				btAssert(solverBodyIdA != -1);
+				btSolverBody& solverBodyA = m_tmpSolverBodyPool[solverBodyIdA];
+				const btScalar deltaVel1Dotn = c.m_contactNormal1.dot(solverBodyA.internalGetDeltaLinearVelocity()) + c.m_relpos1CrossNormal.dot(solverBodyA.internalGetDeltaAngularVelocity());
+				b[i] -= deltaVel1Dotn;
+			}
+
+			const btMultiBody* multiBodyB = c.m_multiBodyB;
+			if (multiBodyB)
+			{
+				const btScalar* jacB = &m_data.m_jacobians[c.m_jacBindex];
+				const btScalar* deltaB = &m_data.m_deltaVelocities[c.m_deltaVelBindex];
+				const int ndofB = multiBodyB->getNumDofs() + 6;
+				const btScalar deltaVel2Dotn = computeDeltaVelocityInConstraintSpace(deltaB, jacB, ndofB);
+				b[i] -= deltaVel2Dotn;
+			}
+			else
+			{
+				const int solverBodyIdB = c.m_solverBodyIdB;
+				btAssert(solverBodyIdB != -1);
+				btSolverBody& solverBodyB = m_tmpSolverBodyPool[solverBodyIdB];
+				const btScalar deltaVel2Dotn = c.m_contactNormal2.dot(solverBodyB.internalGetDeltaLinearVelocity()) + c.m_relpos2CrossNormal.dot(solverBodyB.internalGetDeltaAngularVelocity());
+				b[i] -= deltaVel2Dotn;
+			}
+		}
+#ifndef NDEBUG
+		else
+		{
+			// Assumed b[i] is set to zero in advance and never changed.
+			btAssert(btFuzzyZero(b[i]));
+			//			btAssert(btFuzzyZero(bSplit[i]));
+		}
+#endif
+
+		// TODO(JS): Needs to be updated
+
+		const int fIndex = limitDependencies[i];
+		// Normal contact constraint
+		if (fIndex == -1)
+		{
+			lo[i] = btMin(c.m_lowerLimit - btScalar(c.m_appliedImpulse), c.m_lowerLimit);
+			hi[i] = btMax(c.m_upperLimit - btScalar(c.m_appliedImpulse), c.m_upperLimit);
+		}
+		// Friction or torsional friction constraints
+		else
+		{
+			btMultiBodySolverConstraint& normalContactConst = *(allConstraintPtrArray[fIndex]);
+			const btScalar appliedNormalImpulse = normalContactConst.m_appliedImpulse;
+			if (!btFuzzyZero(appliedNormalImpulse))
+			{
+				const btScalar appliedFriction = btScalar(c.m_appliedImpulse) / appliedNormalImpulse;
+				lo[i] = btMin(c.m_lowerLimit - appliedFriction, c.m_lowerLimit);
+				hi[i] = btMax(c.m_upperLimit - appliedFriction, c.m_upperLimit);
+			}
+			else
+			{
+				lo[i] = c.m_lowerLimit;
+				hi[i] = c.m_upperLimit;
+			}
+		}
+		// TODO(JS): Needs to update for torsional friction once introduced
+	}
+
 	bool result = true;
 	{
 		BT_PROFILE("solveMLCP");
@@ -716,6 +816,7 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 	if (!result)
 	{
 		m_fallback++;
+		printf("[DEBUG] FALLING_BACK: %d\n", m_fallback);
 		return btMultiBodyConstraintSolver::solveGroupCacheFriendlyIterations(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 	}
 

@@ -216,65 +216,6 @@ btDoubleBlockSplittingPolicy::~btDoubleBlockSplittingPolicy()
 	// Do nothing
 }
 
-static void setupBlockSolverBodyPool(
-//	btMultiBody* multiBody,
-	btAlignedObjectArray<btSolverBody*>& solverBodyPtrPool
-//	btAlignedObjectArray<int>& blockDeltaVelIndices,
-//	int& blockDeltaVelIndex,
-//	int& blockJacobianIndex,
-//	btMultiBodyJacobianData& blockJacobianData,
-//	btAlignedObjectArray<int>& originalDeltaVelIndices,
-//	const int originalDeltaVelIndex,
-//	const int originalJacobianIndex,
-//	const btMultiBodyJacobianData& originalJacobianData
-)
-{
-//	btAlignedObjectArray<btScalar>& blockJacobians = blockJacobianData.m_jacobians;
-//	btAlignedObjectArray<btScalar>& blockDeltaVelocities = blockJacobianData.m_deltaVelocities;
-//	btAlignedObjectArray<btScalar>& blockDeltaVelocitiesUnitImpulse = blockJacobianData.m_deltaVelocitiesUnitImpulse;
-
-//	const btAlignedObjectArray<btScalar>& originalJacobians = originalJacobianData.m_jacobians;
-//	const btAlignedObjectArray<btScalar>& originalDeltaVelocitiesUnitImpulse = originalJacobianData.m_deltaVelocitiesUnitImpulse;
-
-//	int indexInBlock = -1;
-//	for (int i = 0; i < solverBodyPtrPool.size(); ++i)
-//	{
-//		if (multiBody == multiBodySet[i])
-//		{
-//			indexInBlock = i;
-//			break;
-//		}
-//	}
-
-//	if (indexInBlock == -1)
-//	{
-//		blockDeltaVelIndex = blockDeltaVelocities.size();
-//		blockDeltaVelocities.resize(blockDeltaVelocities.size() + ndof);
-//		multiBodySet.push_back(multiBody);
-//		originalDeltaVelIndices.push_back(originalDeltaVelIndex);
-//		blockDeltaVelIndices.push_back(blockDeltaVelIndex);
-//	}
-//	else
-//	{
-//		blockDeltaVelIndex = blockDeltaVelIndices[indexInBlock];
-//	}
-
-//	blockJacobianIndex = blockJacobians.size();
-//	blockJacobians.resize(blockJacobians.size() + ndof);
-//	blockDeltaVelocitiesUnitImpulse.resize(blockDeltaVelocitiesUnitImpulse.size() + ndof);
-//	btAssert(blockJacobians.size() == blockDeltaVelocitiesUnitImpulse.size());
-
-//	btScalar* blockJacobiansRawPtr = &blockJacobians[blockJacobianIndex];
-//	const btScalar* originalJacobiansRawPtr = &originalJacobians[originalJacobianIndex];
-//	memcpy(blockJacobiansRawPtr, originalJacobiansRawPtr, ndof * sizeof(btScalar));
-
-//	btScalar* blockDeltaVelUnitImp = &blockDeltaVelocitiesUnitImpulse[blockJacobianIndex];
-//	const btScalar* originalDeltaVelUnitImp = &originalDeltaVelocitiesUnitImpulse[originalJacobianIndex];
-//	memcpy(blockDeltaVelUnitImp, originalDeltaVelUnitImp, ndof * sizeof(btScalar));
-
-//	btAssert(blockJacobians.size() >= blockDeltaVelocities.size());
-}
-
 template <typename ArrayT>
 void splitContactConstraints(const ArrayT& input, ArrayT& output1, ArrayT& output2)
 {
@@ -435,42 +376,87 @@ void btDoubleBlockSplittingPolicy::split(
 {
 	btMultiBodyConstraintBlock constraintBlock1 = initializeConstraintBlock(originalInternalData);
 	btMultiBodyConstraintBlock constraintBlock2 = initializeConstraintBlock(originalInternalData);
+	btMultiBodyConstraintBlock constraintBlock3 = initializeConstraintBlock(originalInternalData);
 
 	constraintBlock1.m_solver = m_solver;
 	constraintBlock2.m_solver = m_solver;
+	constraintBlock3.m_solver = m_solver;
 
 	btDantzigSolver* mlcp = new btDantzigSolver();
 	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-	constraintBlock2.m_solver = sol;
+//	constraintBlock2.m_solver = sol;
 
 	const int totalMultiBodyContactConstraintSize = originalInternalData.m_multiBodyNormalContactConstraints.size();
 	const int halfMultiBodyContactConstraintSize = totalMultiBodyContactConstraintSize / 2;
 
-//	for (int i = 0; i < halfMultiBodyContactConstraintSize; ++i)
-//	{
-//		copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
-//	}
-
-//	for (int i = halfMultiBodyContactConstraintSize; i < totalMultiBodyContactConstraintSize; ++i)
-//	{
-//		copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
-//	}
-
-	for (int i = 0; i < totalMultiBodyContactConstraintSize; ++i)
+	for (int i = 0; i < halfMultiBodyContactConstraintSize; ++i)
 	{
-		if (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group1") == 0)
-			copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
-		else
-			copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
+		copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
 	}
+
+	for (int i = halfMultiBodyContactConstraintSize; i < totalMultiBodyContactConstraintSize; ++i)
+	{
+		copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
+	}
+
+	const int totalMultiBodyNonContactConstraintSize = originalInternalData.m_multiBodyNonContactConstraints.size();
+
+	for (int i = 0; i < totalMultiBodyNonContactConstraintSize; ++i)
+	{
+//		copyMultiBodyNonContactConstraint(constraintBlock3, originalInternalData, i);
+	}
+
+
+//	for (int i = 0; i < totalMultiBodyContactConstraintSize; ++i)
+//	{
+//		if (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group1") == 0)
+//			copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
+//		else
+//			copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
+//	}
 
 	subBlocks.push_back(constraintBlock1);
 	subBlocks.push_back(constraintBlock2);
+	subBlocks.push_back(constraintBlock3);
 }
 
 btMultiBodyBlockSplittingPolicy::~btMultiBodyBlockSplittingPolicy()
 {
 	// Do nothing
+}
+
+void btMultiBodyBlockSplittingPolicy::copyMultiBodyNonContactConstraint(btMultiBodyConstraintBlock& block, btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& originalInternalData, int originalNonContactConstraintIndex)
+{
+	btAlignedObjectArray<btMultiBodySolverConstraint>& originalNonContactConstraints = originalInternalData.m_multiBodyNonContactConstraints;
+	const btMultiBodyJacobianData& originalJacobianData = originalInternalData.m_data;
+
+	btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInternalData = block.m_internalData;
+	btAlignedObjectArray<btMultiBodySolverConstraint>& blockNonContactConstraints = blockInternalData.m_multiBodyNonContactConstraints;
+
+	btAlignedObjectArray<btMultiBodySolverConstraint*>& blockOriginalNonContactConstraintPtrs = block.m_originalMultiBodyNonContactConstraintPtrs;
+
+	btMultiBodyJacobianData& blockJacobianData = block.m_internalData.m_data;
+
+	btAlignedObjectArray<btMultiBody*>& blockMultiBodySet = block.m_multiBodies;
+
+	const int blockFrictionIndex = blockNonContactConstraints.size();
+
+	btMultiBodySolverConstraint& originalNonContactConstraint = originalNonContactConstraints[originalNonContactConstraintIndex];
+
+	btMultiBodySolverConstraint& blockNonContactConstraint = blockNonContactConstraints.expandNonInitializing();
+	blockOriginalNonContactConstraintPtrs.push_back(&originalNonContactConstraint);
+
+	setupMultiBodyBlockConstraintData(
+		block,
+		blockMultiBodySet,
+		block.m_deltaVelIndices,
+		blockNonContactConstraint,
+		blockJacobianData,
+		blockFrictionIndex,
+		originalInternalData,
+		block.m_originalDeltaVelIndices,
+		originalNonContactConstraint,
+		originalJacobianData);
 }
 
 void btMultiBodyBlockSplittingPolicy::copyMultiBodyContactConstraint(btMultiBodyConstraintBlock& block, btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& originalInternalData, int originalNormalContactConstraintIndex)
@@ -611,6 +597,19 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	m_blocks.resize(0);
 	m_splittingPolicy->split(originalInternalDataCopy, configs, m_blocks);
 
+//	for (int i = 0; i < m_blocks.size(); ++i)
+//	{
+//		btMultiBodyConstraintBlock& block = m_blocks[i];
+//		btMultiBodyConstraintSolver* solver = block.m_solver;
+//		btAssert(solver);
+
+//		solver->solveGroupConvertConstraintPrestep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
+//		copyDynamicDataFromOriginalToBlock(block);
+////			block.copyDynamicDataFromOriginalToBlock();
+//		solver->setMultiBodyInternalConstraintData(block.m_internalData, false);
+//		solver->solveGroupConvertConstraintPoststep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
+//	}
+
 	// 3. Gauss-Seidel iterations
 
 	const int maxIterations = m_maxOverrideNumSolverIterations > info.m_numIterations ? m_maxOverrideNumSolverIterations : info.m_numIterations;
@@ -630,7 +629,6 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 
 			solver->solveGroupConvertConstraintPrestep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
 			copyDynamicDataFromOriginalToBlock(block);
-//			block.copyDynamicDataFromOriginalToBlock();
 			solver->setMultiBodyInternalConstraintData(block.m_internalData, false);
 			solver->solveGroupConvertConstraintPoststep(bodies, numBodies, manifold, numManifolds, constraints, numConstraints, info, debugDrawer);
 

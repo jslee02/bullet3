@@ -283,7 +283,7 @@ void	MultiDofDemo::initPhysics()
             frameInB.setIdentity();
             btVector3 jointAxis(1.0,0.0,0.0);
             //btMultiBodySliderConstraint* p2p = new btMultiBodySliderConstraint(mbC,numLinks-1,body,pointInA,pointInB,frameInA,frameInB,jointAxis);
-            btMultiBodyFixedConstraint* p2p = new btMultiBodyFixedConstraint(mbC,numLinks-1,mbC,numLinks-4,pointInA,pointInA,frameInA,frameInB);
+			btMultiBodyFixedConstraint* p2p = new btMultiBodyFixedConstraint(mbC,numLinks-1,mbC,numLinks-4,pointInA,pointInA,frameInA,frameInB);
             p2p->setMaxAppliedImpulse(2.0);
             m_dynamicsWorld->addMultiBodyConstraint(p2p);
         }
