@@ -1592,13 +1592,17 @@ void btMultiBodyConstraintSolver::writeBackSolverBodyToMultiBody(btMultiBodySolv
 
 }
 
-btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal)
+btScalar btMultiBodyConstraintSolver::solveMultiBodyGroupConvertBackPrestep(btCollisionObject** bodies, int numBodies, const btContactSolverInfo& infoGlobal)
 {
-	BT_PROFILE("btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish");
-	int numPoolConstraints = m_multiBodyNormalContactConstraints.size();
-	
+	return btSequentialImpulseConstraintSolver::solveGroupConvertBackPrestep(bodies,numBodies,infoGlobal);
+}
 
-	//write back the delta v to the multi bodies, either as applied impulse (direct velocity change) 
+btScalar btMultiBodyConstraintSolver::solveMultiBodyGroupConvertBack(btCollisionObject** bodies, int numBodies, const btContactSolverInfo& infoGlobal)
+{
+	int numPoolConstraints = m_multiBodyNormalContactConstraints.size();
+
+
+	//write back the delta v to the multi bodies, either as applied impulse (direct velocity change)
 	//or as applied force, so we can measure the joint reaction forces easier
 	for (int i=0;i<numPoolConstraints;i++)
 	{
@@ -1620,7 +1624,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 		writeBackSolverBodyToMultiBody(solverConstraint,infoGlobal.m_timeStep);
 	}
 
-	
+
 	if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 	{
 		BT_PROFILE("warm starting write back");
@@ -1631,7 +1635,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 			btAssert(pt);
 			pt->m_appliedImpulse = solverConstraint.m_appliedImpulse;
 			pt->m_appliedImpulseLateral1 = m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex].m_appliedImpulse;
-			
+
 			//printf("pt->m_appliedImpulseLateral1 = %f\n", pt->m_appliedImpulseLateral1);
 			if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
 			{
@@ -1647,7 +1651,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 		for (int j=0;j<numPoolConstraints;j++)
 		{
 			const btMultiBodySolverConstraint& solverConstraint = m_multiBodyNormalContactConstraints[j];
-		
+
 			//apply the joint feedback into all links of the btMultiBody
 			//todo: double-check the signs of the applied impulse
 
@@ -1675,7 +1679,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 					m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex].m_multiBodyB,
 					m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex].m_appliedImpulse*btSimdScalar(-1./infoGlobal.m_timeStep));
 			}
-		
+
 			if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
 			{
 				if (m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex+1].m_multiBodyA && m_multiBodyFrictionContactConstraints[solverConstraint.m_frictionIndex+1].m_multiBodyA->isMultiDof())
@@ -1696,7 +1700,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 			}
 #endif
 		}
-	
+
 		for (int i=0;i<m_multiBodyNonContactConstraints.size();i++)
 		{
 			const btMultiBodySolverConstraint& solverConstraint = m_multiBodyNonContactConstraints[i];
@@ -1727,7 +1731,7 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 			fb->m_appliedForceBodyB += c.m_contactNormal2*c.m_appliedImpulse*constr->getRigidBodyB().getLinearFactor()/infoGlobal.m_timeStep;
 			fb->m_appliedTorqueBodyA += c.m_relpos1CrossNormal* constr->getRigidBodyA().getAngularFactor()*c.m_appliedImpulse/infoGlobal.m_timeStep;
 			fb->m_appliedTorqueBodyB += c.m_relpos2CrossNormal* constr->getRigidBodyB().getAngularFactor()*c.m_appliedImpulse/infoGlobal.m_timeStep; /*RGM ???? */
-			
+
 		}
 
 		constr->internalSetAppliedImpulse(c.m_appliedImpulse);
@@ -1737,10 +1741,24 @@ btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionO
 		}
 
 	}
-#endif 
+#endif
 #endif
 
-	return btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyFinish(bodies,numBodies,infoGlobal);
+	return btSequentialImpulseConstraintSolver::solveGroupConvertBack(bodies,numBodies,infoGlobal);
+}
+
+btScalar btMultiBodyConstraintSolver::solveMultiBodyGroupConvertBackPoststep(btCollisionObject** bodies, int numBodies, const btContactSolverInfo& infoGlobal)
+{
+	return btSequentialImpulseConstraintSolver::solveGroupConvertBackPoststep(bodies,numBodies,infoGlobal);
+}
+
+btScalar btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal)
+{
+	BT_PROFILE("btMultiBodyConstraintSolver::solveGroupCacheFriendlyFinish");
+	solveGroupConvertBackPrestep(bodies, numBodies, infoGlobal);
+	solveGroupConvertBack(bodies, numBodies, infoGlobal);
+	solveGroupConvertBackPoststep(bodies, numBodies, infoGlobal);
+	return 0.0;
 }
 
 

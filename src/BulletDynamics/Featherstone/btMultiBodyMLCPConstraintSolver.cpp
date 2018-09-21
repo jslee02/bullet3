@@ -567,18 +567,18 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastMultiBody(const btContactSol
 		m_multiBodyB.resize(multiBodyNumConstraints);
 		m_multiBodyB.setZero();
 
-		for (int i = 0; i < multiBodyNumConstraints; ++i)
-		{
-			const btMultiBodySolverConstraint& constraint = *m_multiBodyAllConstraintPtrArray[i];
-			const btScalar jacDiag = constraint.m_jacDiagABInv;
+//		for (int i = 0; i < multiBodyNumConstraints; ++i)
+//		{
+//			const btMultiBodySolverConstraint& constraint = *m_multiBodyAllConstraintPtrArray[i];
+//			const btScalar jacDiag = constraint.m_jacDiagABInv;
 
-			if (!btFuzzyZero(jacDiag))
-			{
-				// Note that rhsPenetration is currently always zero because the split impulse hasn't been implemented for multibody yet.
-				const btScalar rhs = constraint.m_rhs;
-				m_multiBodyB[i] = rhs / jacDiag;
-			}
-		}
+//			if (!btFuzzyZero(jacDiag))
+//			{
+//				// Note that rhsPenetration is currently always zero because the split impulse hasn't been implemented for multibody yet.
+//				const btScalar rhs = constraint.m_rhs;
+//				m_multiBodyB[i] = rhs / jacDiag;
+//			}
+//		}
 	}
 
 	// 2. Compute lo and hi
@@ -588,12 +588,12 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastMultiBody(const btContactSol
 		m_multiBodyLo.resize(multiBodyNumConstraints);
 		m_multiBodyHi.resize(multiBodyNumConstraints);
 
-		for (int i = 0; i < multiBodyNumConstraints; ++i)
-		{
-			const btMultiBodySolverConstraint& constraint = *m_multiBodyAllConstraintPtrArray[i];
-			m_multiBodyLo[i] = constraint.m_lowerLimit;
-			m_multiBodyHi[i] = constraint.m_upperLimit;
-		}
+//		for (int i = 0; i < multiBodyNumConstraints; ++i)
+//		{
+//			const btMultiBodySolverConstraint& constraint = *m_multiBodyAllConstraintPtrArray[i];
+//			m_multiBodyLo[i] = constraint.m_lowerLimit;
+//			m_multiBodyHi[i] = constraint.m_upperLimit;
+//		}
 	}
 
 	// 3. Construct A matrix by using the impulse testing
@@ -630,8 +630,16 @@ void btMultiBodyMLCPConstraintSolver::createMLCPFastMultiBody(const btContactSol
 	// Add CFM to the diagonal of m_A
 	for (int i = 0; i < m_multiBodyA.rows(); ++i)
 	{
-		m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + (infoGlobal.m_globalCfm + btScalar(0.01)) / infoGlobal.m_timeStep);
-//		m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
+		m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + infoGlobal.m_globalCfm / infoGlobal.m_timeStep);
+
+		if (m_multiBodyA(i, i) < btScalar(1e-3))
+		{
+			m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) + btScalar(0.01));
+		}
+		else
+		{
+			m_multiBodyA.setElem(i, i, m_multiBodyA(i, i) * btScalar(1.1));
+		}
 	}
 
 	// 4. Initialize x
@@ -810,6 +818,7 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 	bool result = true;
 	{
 		BT_PROFILE("solveMLCP");
+//		printf("[DEBUG] Do you ever use MLCP??\n");
 		result = solveMLCP(infoGlobal);
 	}
 
@@ -817,7 +826,7 @@ btScalar btMultiBodyMLCPConstraintSolver::solveGroupCacheFriendlyIterations(btCo
 	if (!result)
 	{
 		m_fallback++;
-		printf("[DEBUG] FALLING_BACK: %d\n", m_fallback);
+//		printf("[DEBUG] FALLING_BACK: %d\n", m_fallback);
 		return btMultiBodyConstraintSolver::solveGroupCacheFriendlyIterations(bodies, numBodies, manifoldPtr, numManifolds, constraints, numConstraints, infoGlobal, debugDrawer);
 	}
 

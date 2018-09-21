@@ -132,12 +132,12 @@ void MultipleBoxesExample::initPhysics()
 
 	createEmptyDynamicsWorld();
 	
-	if (g_constraintSolverType == 4)
+	if (g_constraintSolverType == 2)
 	{
 		g_constraintSolverType = 0;
 	}
 
-	g_demo = 0;
+	g_demo = 1;
 
     if (g_demo == 0)
     {
@@ -182,29 +182,33 @@ void MultipleBoxesExample::initPhysics()
     {
 
         btMultiBodyConstraintSolver* sol = new btMultiBodyBlockConstraintSolver();
-//        btMLCPSolverInterface* mlcp;
-//        switch (g_constraintSolverType++)
-//        {
-//        case 0:
-//            sol = new btMultiBodyConstraintSolver;
-//            b3Printf("Constraint Solver: Sequential Impulse");
-//            break;
-//        case 1:
-//            mlcp = new btSolveProjectedGaussSeidel();
-//            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-//            b3Printf("Constraint Solver: MLCP + PGS");
-//            break;
-//        case 2:
-//            mlcp = new btDantzigSolver();
-//            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-//            b3Printf("Constraint Solver: MLCP + Dantzig");
-//            break;
-//        default:
-//            mlcp = new btLemkeSolver();
-//            sol = new btMultiBodyMLCPConstraintSolver(mlcp);
-//            b3Printf("Constraint Solver: MLCP + Lemke");
-//            break;
-//        }
+		btMLCPSolverInterface* mlcp;
+		switch (g_constraintSolverType++)
+		{
+		case 0:
+			sol = new btMultiBodyConstraintSolver;
+			b3Printf("Constraint Solver: Sequential Impulse");
+			break;
+		default:
+			sol = new btMultiBodyBlockConstraintSolver();
+			b3Printf("Constraint Solver: Block");
+			break;
+//		case 1:
+//			mlcp = new btSolveProjectedGaussSeidel();
+//			sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+//			b3Printf("Constraint Solver: MLCP + PGS");
+//			break;
+//		default:
+//			mlcp = new btDantzigSolver();
+//			sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+//			b3Printf("Constraint Solver: MLCP + Dantzig");
+//			break;
+//		default:
+//			mlcp = new btLemkeSolver();
+//			sol = new btMultiBodyMLCPConstraintSolver(mlcp);
+//			b3Printf("Constraint Solver: MLCP + Lemke");
+//			break;
+		}
         m_solver = sol;
 
         world = new btMultiBodyDynamicsWorld(m_dispatcher, m_broadphase, sol, m_collisionConfiguration);

@@ -1892,6 +1892,8 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlyIterations(
 
 		int maxIterations = m_maxOverrideNumSolverIterations > infoGlobal.m_numIterations? m_maxOverrideNumSolverIterations : infoGlobal.m_numIterations;
 
+//		printf("[Debug] # itr: %d\n", maxIterations);
+
 		for ( int iteration = 0 ; iteration< maxIterations ; iteration++)
 		//for ( int iteration = maxIterations-1  ; iteration >= 0;iteration--)
 		{

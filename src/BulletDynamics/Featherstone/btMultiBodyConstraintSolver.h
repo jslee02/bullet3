@@ -128,7 +128,12 @@ public:
 	virtual btScalar solveGroupConvertConstraintPrestep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 	virtual btScalar solveGroupConvertConstraintPoststep(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
 	virtual btScalar solveSingleIterationNew(int iteration, btCollisionObject** bodies ,int numBodies,btPersistentManifold** manifoldPtr, int numManifolds,btTypedConstraint** constraints,int numConstraints,const btContactSolverInfo& infoGlobal,btIDebugDraw* debugDrawer);
+
 	virtual btScalar solveGroupCacheFriendlyFinish(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
+
+	virtual btScalar solveMultiBodyGroupConvertBackPrestep(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
+	virtual btScalar solveMultiBodyGroupConvertBack(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
+	virtual btScalar solveMultiBodyGroupConvertBackPoststep(btCollisionObject** bodies,int numBodies,const btContactSolverInfo& infoGlobal);
 	
 	virtual void solveMultiBodyGroup(btCollisionObject** bodies,int numBodies,btPersistentManifold** manifold,int numManifolds,btTypedConstraint** constraints,int numConstraints,btMultiBodyConstraint** multiBodyConstraints, int numMultiBodyConstraints, const btContactSolverInfo& info, btIDebugDraw* debugDrawer,btDispatcher* dispatcher);
 };

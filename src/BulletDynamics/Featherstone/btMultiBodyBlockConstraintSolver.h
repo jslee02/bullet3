@@ -74,6 +74,8 @@ struct btMultiBodyConstraintBlock
 	/// Constraint solver
 	btMultiBodyConstraintSolver* m_solver;
 
+	btContactSolverInfo m_info;
+
 	bool m_ownSolver = true;
 	// TODO(JS): If this is true, then don't copy all the constraint data, but
 	// only dynamic data
@@ -102,11 +104,11 @@ struct btMultiBodyConstraintBlock
 		btAlignedObjectArray<btMultiBodySolverConstraint>& m_multiBodyTorsionalFrictionContactConstraints,
 		btMultiBodyJacobianData* m_data);
 
-	void copyDynamicDataFromOriginalToBlock();
-	void copyDynamicDataFromBlockToOriginal();
+//	void copyDynamicDataFromOriginalToBlock();
+//	void copyDynamicDataFromBlockToOriginal();
 
-	void copyRigidBodyDynamicDataFromOriginalToBlock();
-	void copyRigidBodyDynamicDataFromBlockToOriginal();
+//	void copyRigidBodyDynamicDataFromOriginalToBlock();
+//	void copyRigidBodyDynamicDataFromBlockToOriginal();
 
 //	int getOrInitSolverBody();
 };
@@ -123,7 +125,7 @@ public:
 	/// \param[in] availableConfigs
 	/// \param[in,out] blocksOutput The splitted blocks. This function adds blocks without clearning the array
 	/// beforehand. Clearning the array is the caller's responsibility.
-	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& blocksOutput) = 0;
+	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& blocksOutput, const btContactSolverInfo& info) = 0;
 
 protected:
 	void copyMultiBodyNonContactConstraint(
@@ -157,7 +159,7 @@ public:
 	virtual ~btSingleBlockSplittingPolicy();
 
 	// Documentation inherited
-	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& blocksOutput);
+	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& blocksOutput, const btContactSolverInfo& info);
 };
 
 class btDoubleBlockSplittingPolicy : public btMultiBodyBlockSplittingPolicy
@@ -173,7 +175,23 @@ public:
 	virtual ~btDoubleBlockSplittingPolicy();
 
 	// Documentation inherited
-	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& blocksOutput);
+	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& blockInput, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& blocksOutput, const btContactSolverInfo& info);
+};
+
+class btHVSplittingPolicy : public btMultiBodyBlockSplittingPolicy
+{
+protected:
+	btMultiBodyConstraintSolver* m_solver;
+
+public:
+	/// Constructor
+	btHVSplittingPolicy(btMultiBodyConstraintSolver* solver);
+
+	/// Destructor
+	virtual ~btHVSplittingPolicy();
+
+	// Documentation inherited
+	virtual void split(btMultiBodyConstraintSolver::btMultiBodyInternalConstraintData& originalInternalData, const btAlignedObjectArray<btBlockConstraintSolverConfig>& availableConfigs, btAlignedObjectArray<btMultiBodyConstraintBlock>& subBlocks, const btContactSolverInfo& info);
 };
 
 class btMultiBodyBlockConstraintSolver : public btMultiBodyConstraintSolver
