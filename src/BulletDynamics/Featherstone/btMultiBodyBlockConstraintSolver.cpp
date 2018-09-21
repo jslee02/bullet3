@@ -722,8 +722,8 @@ void btDoubleBlockSplittingPolicy::split(btMultiBodyConstraintSolver::btMultiBod
 	btMultiBodyConstraintBlock constraintBlock3 = initializeConstraintBlock(originalInternalData, info);
 	btMultiBodyConstraintBlock constraintBlock4 = initializeConstraintBlock(originalInternalData, info);
 
-	constraintBlock1.m_solver = m_solver;
-	constraintBlock2.m_solver = m_solver;
+//	constraintBlock1.m_solver = m_solver;
+//	constraintBlock2.m_solver = m_solver;
 //	constraintBlock3.m_solver = m_solver;
 //	constraintBlock4.m_solver = m_solver;
 
@@ -731,7 +731,9 @@ void btDoubleBlockSplittingPolicy::split(btMultiBodyConstraintSolver::btMultiBod
 //	btMLCPSolverInterface* mlcp = new btLemkeSolver();
 	btMultiBodyMLCPConstraintSolver* sol = new btMultiBodyMLCPConstraintSolver(mlcp);
 	constraintBlock1.m_solver = new btMultiBodyConstraintSolver();
-	constraintBlock2.m_solver = sol;
+	constraintBlock2.m_solver = new btMultiBodyConstraintSolver();
+	constraintBlock3.m_solver = new btMultiBodyConstraintSolver();
+	constraintBlock4.m_solver = new btMultiBodyConstraintSolver();
 
 //	constraintBlock3.m_solver = new btMultiBodyConstraintSolver();
 //	constraintBlock4.m_solver = new btMultiBodyConstraintSolver();
@@ -785,22 +787,69 @@ void btDoubleBlockSplittingPolicy::split(btMultiBodyConstraintSolver::btMultiBod
 //		copyMultiBodyNonContactConstraint(constraintBlock4, originalInternalData, i);
 //	}
 
+	int count1 = 0;
+	int count2 = 0;
+	int count3 = 0;
+
 	for (int i = 0; i < totalMultiBodyContactConstraintSize; ++i)
 	{
-		if (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group1") == 0)
+		if ((strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group1a") == 0) || (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyB->getBaseName(), "group1a") == 0))
 		{
+			count1++;
 		  copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
 		}
-		else
+		else if ((strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group1b") == 0) || (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyB->getBaseName(), "group1b") == 0))
 		{
+			count2++;
 		  copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
 		}
+		else if ((strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group2a") == 0) || (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyB->getBaseName(), "group2a") == 0))
+		{
+			count3++;
+		  copyMultiBodyContactConstraint(constraintBlock3, originalInternalData, i);
+		}
+		else if ((strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group2b") == 0) || (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyB->getBaseName(), "group2b") == 0))
+		{
+			count3++;
+		  copyMultiBodyContactConstraint(constraintBlock4, originalInternalData, i);
+		}
+//		copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
 	}
+
+	printf("count1 : %d\n", count1);
+	printf("count2 : %d\n", count2);
+	printf("count3 : %d\n\n", count3);
+
+
+//	int count1 = 0;
+//	int count2 = 0;
+
+//	for (int i = 0; i < totalMultiBodyContactConstraintSize; ++i)
+//	{
+//		if (strcmp(originalInternalData.m_multiBodyNormalContactConstraints[i].m_multiBodyA->getBaseName(), "group1") == 0)
+//		{
+//			if (count1 % 1)
+//			  copyMultiBodyContactConstraint(constraintBlock1, originalInternalData, i);
+//			else
+//			  copyMultiBodyContactConstraint(constraintBlock2, originalInternalData, i);
+
+//			count1++;
+//		}
+//		else
+//		{
+//			if (count2 % 1)
+//			  copyMultiBodyContactConstraint(constraintBlock3, originalInternalData, i);
+//			else
+//			  copyMultiBodyContactConstraint(constraintBlock4, originalInternalData, i);
+
+//			count2++;
+//		}
+//	}
 
 	subBlocks.push_back(constraintBlock1);
 	subBlocks.push_back(constraintBlock2);
-//	subBlocks.push_back(constraintBlock3);
-//	subBlocks.push_back(constraintBlock4);
+	subBlocks.push_back(constraintBlock3);
+	subBlocks.push_back(constraintBlock4);
 }
 
 
@@ -1183,7 +1232,7 @@ void btMultiBodyBlockConstraintSolver::solveMultiBodyGroup(
 	m_splittingPolicy = new btDoubleBlockSplittingPolicy(new btMultiBodyConstraintSolver());
 //	m_splittingPolicy = new btHVSplittingPolicy(new btMultiBodyConstraintSolver());
 
-    btAssert(m_splittingPolicy);
+	btAssert(m_splittingPolicy);
 	m_blocks.resize(0);
 	m_splittingPolicy->split(originalInternalDataCopy, configs, m_blocks, info);
 

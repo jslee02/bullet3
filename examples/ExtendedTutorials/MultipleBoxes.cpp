@@ -185,14 +185,14 @@ void MultipleBoxesExample::initPhysics()
 		btMLCPSolverInterface* mlcp;
 		switch (g_constraintSolverType++)
 		{
-		case 0:
-			sol = new btMultiBodyConstraintSolver;
-			b3Printf("Constraint Solver: Sequential Impulse");
-			break;
-		default:
-			sol = new btMultiBodyBlockConstraintSolver();
-			b3Printf("Constraint Solver: Block");
-			break;
+//		case 0:
+//			sol = new btMultiBodyConstraintSolver;
+//			b3Printf("Constraint Solver: Sequential Impulse");
+//			break;
+//		default:
+//			sol = new btMultiBodyBlockConstraintSolver();
+//			b3Printf("Constraint Solver: Block");
+//			break;
 //		case 1:
 //			mlcp = new btSolveProjectedGaussSeidel();
 //			sol = new btMultiBodyMLCPConstraintSolver(mlcp);
@@ -302,12 +302,14 @@ void MultipleBoxesExample::makeScene2(btMultiBodyDynamicsWorld* world)
 
     //	btScalar maxMass = 10000;
     btScalar minMass = 0.1;
-	btScalar stepMass = 1.8;
+	btScalar stepMass = 2.0;
+
+	const int half = TOTAL_BOXES/2;
 
     {
         //create a few dynamic rigidbodies
         // Re-using the same collision is better for memory usage and performance
-        btBoxShape* colShape = createBoxShape(btVector3(1,1,1));
+		btBoxShape* colShape = createBoxShape(btVector3(1.5,1,1.5));
 
         m_collisionShapes.push_back(colShape);
 
@@ -325,15 +327,24 @@ void MultipleBoxesExample::makeScene2(btMultiBodyDynamicsWorld* world)
             colShape->calculateLocalInertia(mass,localInertia);
 
 
-        for(int i=0;i<TOTAL_BOXES;++i)
-        {
-            startTransform.setOrigin(btVector3(
-                                         btScalar(-distance),
-                                         btScalar(2+i*2),
-                                         btScalar(0)));
-            createSingleMultiBody(world, "group1", mass,startTransform,colShape);
-            mass *= stepMass;
-        }
+		for(int i=0;i<half;++i)
+		{
+			startTransform.setOrigin(btVector3(
+										 btScalar(-distance),
+										 btScalar(2+i*2),
+										 btScalar(0)));
+			createSingleMultiBody(world, "group1a", mass,startTransform,colShape);
+			mass *= stepMass;
+		}
+		for(int i=half;i<TOTAL_BOXES;++i)
+		{
+			startTransform.setOrigin(btVector3(
+										 btScalar(-distance),
+										 btScalar(2+i*2),
+										 btScalar(0)));
+			createSingleMultiBody(world, "group1b", mass,startTransform,colShape);
+			mass *= stepMass;
+		}
     }
 
 
@@ -344,7 +355,7 @@ void MultipleBoxesExample::makeScene2(btMultiBodyDynamicsWorld* world)
     {
         //create a few dynamic rigidbodies
         // Re-using the same collision is better for memory usage and performance
-        btBoxShape* colShape = createBoxShape(btVector3(1,1,1));
+		btBoxShape* colShape = createBoxShape(btVector3(1.5,1,1.5));
 
         m_collisionShapes.push_back(colShape);
 
@@ -361,16 +372,24 @@ void MultipleBoxesExample::makeScene2(btMultiBodyDynamicsWorld* world)
         if (isDynamic)
             colShape->calculateLocalInertia(mass,localInertia);
 
-
-        for(int i=0;i<TOTAL_BOXES;++i)
-        {
-            startTransform.setOrigin(btVector3(
-                                         btScalar(distance),
-                                         btScalar(2+i*2),
-                                         btScalar(0)));
-            createSingleMultiBody(world, "group2", mass,startTransform,colShape);
-            mass *= stepMass;
-        }
+		for(int i=0;i<half;++i)
+		{
+			startTransform.setOrigin(btVector3(
+										 btScalar(distance),
+										 btScalar(2+i*2),
+										 btScalar(0)));
+			createSingleMultiBody(world, "group2a", mass,startTransform,colShape);
+			mass *= stepMass;
+		}
+		for(int i=half;i<TOTAL_BOXES;++i)
+		{
+			startTransform.setOrigin(btVector3(
+										 btScalar(distance),
+										 btScalar(2+i*2),
+										 btScalar(0)));
+			createSingleMultiBody(world, "group2b", mass,startTransform,colShape);
+			mass *= stepMass;
+		}
     }
 }
 
